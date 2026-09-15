@@ -61,9 +61,14 @@ export function advancePhase(state) {
   return { from, to: state.phase, meta: PHASES[state.phase] };
 }
 
-// The camera scale ladder: RACK -> SERVER ROOM -> CAMPUS -> REGION -> WORLD -> ORBIT
-export const SCOPES = Object.freeze(['RACK', 'SERVER ROOM', 'CAMPUS', 'REGION', 'WORLD', 'ORBIT']);
-export function scopeFor(phase) { return SCOPES[Math.min(SCOPES.length - 1, phase)]; }
+// The camera scale ladder (GDD §15.3): RACK -> SERVER ROOM -> CAMPUS ->
+// REGION -> WORLD -> ORBIT. Six phases map onto it with SERVER ROOM folded
+// into RACK, because Phases 3 and 4 both sit at WORLD and the pull-back at
+// each transition matters more than using every rung.
+export const SCOPE_LADDER = Object.freeze(['RACK', 'SERVER ROOM', 'CAMPUS', 'REGION', 'WORLD', 'ORBIT']);
+export function scopeFor(phase) {
+  return PHASES[Math.max(0, Math.min(5, phase | 0))].scope;
+}
 
 export function tickUnit(phase) { return TUNING.tickUnitByPhase[phase] || 'day'; }
 

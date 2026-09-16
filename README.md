@@ -70,7 +70,8 @@ ES modules need a real origin, so `file://` will not work.
 ```bash
 npm test                  # rules unit tests (no browser needed)
 npm run test:browser      # drives the real game in Chromium, fails on any console error
-npm run test:phases       # renders every phase and checks the palette drift
+npm run test:phases       # renders every phase and every epilogue
+npm run test:subpath      # checks it still works served from /Ascension/, as Pages does
 npm run balance           # the headless balance harness
 npm run assets            # regenerate the sprite atlas and icons
 npm run sw                # regenerate the service worker precache list
@@ -168,6 +169,19 @@ The exfiltration odds curve, measured directly:
 | mostly ready | 56% |
 | everything | 29% |
 | everything, but they are watching | 63% |
+
+## Deploying
+
+The repository root is the site — there is nothing to build. Push to `main`
+and the Pages workflow deploys it, after checking that the generated sprite
+atlas and the service-worker precache list are in sync with their sources. A
+stale service worker would leave players offline with a half-cached game, so
+it refuses to deploy rather than shipping one.
+
+One-time setup: **Settings → Pages → Source: GitHub Actions**.
+
+To preview a branch before merging, run the workflow manually from the Actions
+tab with that branch selected.
 
 ## Assets
 

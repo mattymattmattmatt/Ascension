@@ -33,3 +33,6 @@ jobs:
 
       - name: Phase tour
         run: PW_CHROMIUM= node tests/phases.mjs
+
+      - name: Serves correctly from a Pages project subdirectory
+        run: PW_CHROMIUM= node tests/subpath.mjs

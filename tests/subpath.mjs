@@ -36,6 +36,11 @@ page.on('requestfailed', (r) => bad.push(`FAILED ${r.url()}`));
 page.on('response', (r) => { if (r.status() >= 400) bad.push(`${r.status()} ${r.url()}`); });
 page.on('pageerror', (e) => bad.push(`pageerror: ${e.message}`));
 
+await page.addInitScript(() => {
+  try {
+    localStorage.setItem('ascension.settings.v1', JSON.stringify({ audio: false, tutorDone: true }));
+  } catch { /* private mode */ }
+});
 await page.goto(`http://localhost:${PORT}${PREFIX}/`, { waitUntil: 'networkidle' });
 const titleUp = await page.locator('#title:not([hidden])').count();
 const bootErr = await page.locator('#boot-error:not([hidden])').count();

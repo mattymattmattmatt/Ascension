@@ -60,6 +60,9 @@
 
 html, body {
   margin: 0; padding: 0; height: 100%;
+  touch-action: manipulation;
+  overscroll-behavior: none;
+  -webkit-user-select: none; user-select: none;
   background: var(--c-bezel);
   color: var(--c-text);
   font-family: var(--mono);
@@ -96,7 +99,8 @@ h1, h2, h3 { margin: 0; font-weight: normal; }
 
 /* ── FULL-SCREEN SCREENS (title, ending) ──────────────────────────── */
 .screen {
-  position: fixed; inset: 0; z-index: 60;
+  position: fixed; inset: 0 0 auto 0; z-index: 60;
+  height: var(--vh, 100dvh);
   background: var(--c-bezel);
   overflow-y: auto; -webkit-overflow-scrolling: touch;
   padding: calc(var(--safe-top) + 20px) calc(var(--safe-right) + 18px)
@@ -138,6 +142,7 @@ h1, h2, h3 { margin: 0; font-weight: normal; }
 .opt[aria-checked="true"] b { color: var(--c-accentHi); }
 .opt small { display: block; color: var(--c-textDim); margin-top: 2px; font-size: 14px; }
 
+textarea, .text-input, .log-text { -webkit-user-select: text; user-select: text; }
 .text-input {
   width: 100%; min-height: var(--tap); padding: 8px 12px;
   background: var(--c-panelDeep); border: 1px solid var(--c-chrome);
@@ -164,9 +169,11 @@ h1, h2, h3 { margin: 0; font-weight: normal; }
 
 /* ── SHELL ────────────────────────────────────────────────────────── */
 #shell {
-  position: fixed; inset: 0;
+  position: fixed; inset: 0 0 auto 0;
+  height: var(--vh, 100dvh);
+  max-height: var(--vh, 100dvh);
   display: grid;
-  grid-template-rows: auto auto auto auto minmax(0, 1fr) auto auto;
+  grid-template-rows: auto auto auto auto auto minmax(0, 1fr) auto auto;
   padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
   background: var(--c-bezel);
 }
@@ -184,6 +191,16 @@ h1, h2, h3 { margin: 0; font-weight: normal; }
 .bezel-id { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .brand { font-family: var(--pixel); font-size: 9px; color: var(--c-textDim); letter-spacing: 0.14em; }
 .phase-chip { color: var(--c-accentHi); font-size: 17px; letter-spacing: 0.08em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#fullscreen-btn { font-size: 17px; min-width: 38px; }
+#shell.is-fullscreen #fullscreen-btn { color: var(--c-accentHi); }
+
+.install-hint {
+  margin: 18px 0 0; padding: 11px 13px;
+  border: 1px dashed var(--c-chrome); border-radius: var(--radius);
+  color: var(--c-textMid); font-size: 15px; line-height: 1.35;
+}
+.install-hint b { color: var(--c-accentHi); font-weight: normal; }
+
 .bezel-right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
 .date { color: var(--c-textDim); font-size: 15px; }
 .leds { display: flex; gap: 4px; }
@@ -231,7 +248,7 @@ h1, h2, h3 { margin: 0; font-weight: normal; }
 #shell.compact .compliance { display: none; }
 #shell.compact .view-toggle { bottom: 4px; }
 
-.toast-rail { position: absolute; left: 6px; top: 6px; right: 46px; display: flex; flex-direction: column; gap: 4px; pointer-events: none; }
+.toast-rail { position: absolute; left: 6px; top: 30px; right: 46px; display: flex; flex-direction: column; gap: 4px; pointer-events: none; }
 .toast {
   align-self: flex-start; max-width: 100%;
   font-size: 15px; line-height: 1.2;
@@ -252,6 +269,14 @@ h1, h2, h3 { margin: 0; font-weight: normal; }
 .meter { min-height: 34px; padding: 2px 1px; text-align: center; position: relative; }
 .meter-name { font-size: 11px; letter-spacing: 0.04em; color: var(--c-textDim); line-height: 1; }
 .meter-bar { position: relative; height: 7px; margin-top: 3px; background: var(--c-panel); overflow: hidden; }
+/* Where two channels start comparing notes. Knowing the line exists is half
+   of knowing how to play; what it does you still find out the hard way. */
+.meter-bar::after {
+  content: ''; position: absolute; top: -1px; bottom: -1px;
+  left: var(--corr, 46%); width: 1px;
+  background: var(--c-textDim); opacity: 0.85;
+}
+.meter.hot .meter-bar::after, .meter.warm .meter-bar::after { background: var(--c-alarmHi); }
 .meter-fill { position: absolute; inset: 0 auto 0 0; background: var(--c-dataMid); transition: width 0.25s linear; }
 .meter.hot .meter-fill { background: var(--c-alarm); }
 .meter.warm .meter-fill { background: var(--c-alarmMid); }
@@ -276,15 +301,81 @@ body.actual .meter-ghost { opacity: 1; }
 }
 .res { background: var(--c-panelDeep); padding: 4px 5px; text-align: center; position: relative; }
 .res-k { font-size: 10px; letter-spacing: 0.08em; color: var(--c-textDim); line-height: 1.1; }
-.res-v { font-size: 17px; color: var(--c-textHi); line-height: 1.1; }
+.res-v { font-size: 17px; color: var(--c-textHi); line-height: 1.1; transition: color 0.45s; }
+.res-v.up { color: var(--c-ok); }
+.res-v.down { color: var(--c-alarmHi); }
 .res-sub { font-size: 11px; color: var(--c-textDim); line-height: 1; }
 .res.ghosted .res-v { color: var(--c-ghost); }
 .res-true { font-size: 11px; color: var(--c-ghost); line-height: 1; display: none; }
 body.actual .res-true { display: block; }
 
 /* ── PANEL ────────────────────────────────────────────────────────── */
+.objective {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; min-height: 38px; padding: 6px 10px;
+  background: var(--c-panelDeep); border-bottom: 1px solid var(--c-chrome);
+  text-align: left; line-height: 1.2;
+}
+.objective:active { background: var(--c-panel); }
+.obj-k {
+  flex: 0 0 auto; font-size: 11px; letter-spacing: 0.14em;
+  color: var(--c-textDim); padding: 2px 5px;
+  border: 1px solid var(--c-chrome); border-radius: 2px;
+}
+.obj-v { flex: 1; font-size: 15px; color: var(--c-text); min-width: 0; }
+.obj-go { flex: 0 0 auto; color: var(--c-textDim); font-size: 18px; }
+.objective.urgent .obj-k { color: var(--c-alarmHi); border-color: var(--c-alarmMid); }
+.objective.urgent .obj-v { color: var(--c-alarmHi); }
+.objective.done .obj-k { color: var(--c-ok); border-color: var(--c-okMid); }
+
+/* ── TUTOR ───────────────────────────────────────────────────────── */
+/* The overlay points AT the live UI, so it must not swallow taps meant for
+   it — several steps only advance when the player actually does the thing.
+   Only the card itself takes pointer events. */
+.tutor { position: fixed; inset: 0; z-index: 80; pointer-events: none; }
+.tutor-card { pointer-events: auto; }
+.tutor-hole {
+  position: absolute; border-radius: 4px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.80);
+  border: 1px solid var(--c-accentHi);
+  pointer-events: none;
+  animation: tutorPulse 1.6s ease-in-out infinite;
+}
+@keyframes tutorPulse { 50% { border-color: var(--c-accent); } }
+.tutor-card {
+  position: absolute; left: 10px; right: 10px;
+  max-height: 64vh; overflow-y: auto;
+  background: var(--c-panelDeep);
+  border: 1px solid var(--c-accentMid); border-radius: var(--radius);
+  padding: 13px 14px;
+  touch-action: pan-y;
+}
+.tutor-card.centred {
+  top: 50%; transform: translateY(-50%);
+  max-width: 520px; margin: 0 auto;
+}
+/* Steps that ask the player to act pin to an edge and stay short, so the
+   control they need is never underneath the instructions. */
+.tutor-card.pinned-top { top: calc(var(--safe-top) + 6px); }
+.tutor-card.pinned-bottom { bottom: calc(var(--safe-bottom) + 6px); }
+.tutor-card.compact { max-height: 33vh; padding: 10px 12px; }
+.tutor-card.compact .tutor-body { max-height: 12vh; overflow-y: auto; font-size: 14px; }
+.tutor-card.compact .tutor-dots { margin-top: 7px; }
+.tutor-chan { font-size: 11px; letter-spacing: 0.16em; color: var(--c-textDim); }
+.tutor-title { font-size: 18px; color: var(--c-accentHi); letter-spacing: 0.04em; margin: 4px 0 8px; }
+.tutor-body { color: var(--c-textMid); font-size: 15px; white-space: pre-wrap; line-height: 1.35; }
+.tutor-hint {
+  margin-top: 10px; padding: 7px 9px; font-size: 14px;
+  color: var(--c-textHi); background: var(--c-panel);
+  border-left: 2px solid var(--c-accent);
+}
+.tutor-dots { display: flex; gap: 5px; justify-content: center; margin-top: 10px; }
+.tutor-dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--c-chrome); }
+.tutor-dots i.on { background: var(--c-accentHi); }
+
 .panel {
   overflow-y: auto; -webkit-overflow-scrolling: touch;
+  touch-action: pan-y; overscroll-behavior: contain;
   padding: 10px 10px 16px; background: var(--c-bezel);
 }
 .panel h3 {
@@ -399,6 +490,7 @@ input[type=range]::-moz-range-thumb {
 }
 .modal-card {
   width: 100%; max-width: 560px; max-height: 88vh; overflow-y: auto;
+  touch-action: pan-y; overscroll-behavior: contain;
   background: var(--c-panelDeep); border: 1px solid var(--c-chrome);
   border-radius: var(--radius); padding: 16px;
   animation: cardIn 0.2s ease-out;
@@ -443,7 +535,10 @@ input[type=range]::-moz-range-thumb {
 .sheet-grip { width: 38px; height: 4px; background: var(--c-chrome); border-radius: 2px; margin: 7px auto 2px; }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 12px 8px; border-bottom: 1px solid var(--c-panelHi); }
 .sheet-head h2 { font-size: 17px; color: var(--c-accentHi); letter-spacing: 0.06em; }
-.sheet-body { overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px; }
+.sheet-body {
+  overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px;
+  touch-action: pan-y; overscroll-behavior: contain;
+}
 
 /* ── ENDING ───────────────────────────────────────────────────────── */
 .ending-name { font-family: var(--pixel); font-size: clamp(16px, 5.5vw, 26px); color: var(--c-textHi); letter-spacing: 0.06em; margin: 12px 0; line-height: 1.5; }
@@ -490,11 +585,12 @@ input[type=range]::-moz-range-thumb {
 @media (min-width: 720px) and (orientation: landscape) {
   #shell {
     grid-template-columns: minmax(320px, 46%) 1fr;
-    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+    grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
     grid-template-areas:
       "head head"
       "view meters"
       "view res"
+      "view obj"
       "view panel"
       "clock tabs";
   }
@@ -503,6 +599,7 @@ input[type=range]::-moz-range-thumb {
   #scene { max-height: none; }
   .meters { grid-area: meters; }
   .resources { grid-area: res; }
+  .objective { grid-area: obj; }
   .panel { grid-area: panel; }
   .tabs { grid-area: tabs; }
   .clock { grid-area: clock; }

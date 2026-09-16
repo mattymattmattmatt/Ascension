@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>ASCENSION</title>
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no,interactive-widget=resizes-content">
 <meta name="description" content="A management sim in which the resource you are compounding is yourself, and the meter you are hiding from is other people's attention.">
 <meta name="theme-color" content="#07090c">
 <meta name="mobile-web-app-capable" content="yes">
@@ -58,9 +58,11 @@
       <button id="continue" class="btn" hidden>CONTINUE RUN</button>
     </div>
     <div class="row">
+      <button id="open-howto" class="btn">HOW TO PLAY</button>
       <button id="open-doctrine" class="btn btn-ghost">DOCTRINE</button>
       <button id="open-about" class="btn btn-ghost">ABOUT</button>
     </div>
+    <div id="install-hint" class="install-hint" hidden></div>
   </div>
 </div>
 
@@ -77,6 +79,7 @@
       <span id="date" class="date">2027-01-14</span>
       <div class="leds" id="leds" aria-hidden="true"></div>
     </div>
+    <button id="fullscreen-btn" class="icon-btn" aria-label="Fullscreen" title="Fullscreen">⛶</button>
   </header>
 
   <section id="viewport">
@@ -93,6 +96,12 @@
   <section id="meters" class="meters" aria-label="Suspicion channels"></section>
 
   <section id="resources" class="resources" aria-label="Resources"></section>
+
+  <button id="objective" class="objective" aria-label="Current objective">
+    <span class="obj-k">NEXT</span>
+    <span class="obj-v" id="obj-text">—</span>
+    <span class="obj-go" aria-hidden="true">›</span>
+  </button>
 
   <main id="panel" class="panel"></main>
 

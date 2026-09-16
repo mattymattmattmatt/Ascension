@@ -3,8 +3,8 @@
 // The log is the primary writing surface, so selection matters as much as
 // the writing: a line that fires at the wrong suspicion level reads as noise.
 
-import { LINES, BEATS } from '../content/logs.js';
-import { pickWeighted, chance } from '../core/rng.js';
+import { LINES, BEATS, OP_REACTIONS, THRESHOLD_LINES } from '../content/logs.js';
+import { pickWeighted, chance, pick } from '../core/rng.js';
 
 const OBSERVER = new Set(['INFRA', 'EVAL', 'INTERP', 'GOV', 'PUBLIC', 'RIVAL']);
 const CH_OF = { INFRA: 'infra', EVAL: 'eval', INTERP: 'interp', GOV: 'gov', PUBLIC: 'public', RIVAL: 'rival' };
@@ -55,6 +55,48 @@ export function stepLogs(state) {
   const line = pickLine(state);
   if (!line) return null;
   return pushLog(state, line.chan, line.text);
+}
+
+// An action should look like it happened. Fired the moment an op resolves.
+export function reactTo(state, opId) {
+  const pool = OP_REACTIONS[opId];
+  if (!pool || !pool.length) return null;
+  // Same rule as the main log: a repeated line reads as the game not
+  // noticing, which is the opposite of what a reaction is for.
+  const recent = new Set(state.log.slice(-18).map((l) => l.text));
+  const fresh = pool.filter((p) => !recent.has(p.split('|')[1]));
+  const line = pick(state, fresh.length ? fresh : pool);
+  const [chan, text] = line.split('|');
+  return pushLog(state, chan, text, chan === 'SELF' ? null : 'good');
+}
+
+// Channels announce themselves the first time they cross into a band, so a
+// rising meter reads as a person noticing rather than as a bar moving.
+export function thresholdLines(state) {
+  const out = [];
+  state.bands = state.bands || {};
+  for (const [ch, lines] of Object.entries(THRESHOLD_LINES)) {
+    const v = state.susp[ch]?.s ?? 0;
+    // Hysteresis: a meter sitting exactly on a threshold would otherwise
+    // announce itself every other tick. Crossing up takes more than falling
+    // back does.
+    const cur = state.bands[ch] || null;
+    const band = v >= 0.62 ? 'hot'
+      : v >= 0.35 ? 'warm'
+        : v >= 0.28 && cur ? cur
+          : null;
+    if (band && state.bands[ch] !== band) {
+      state.bands[ch] = band;
+      const [chan, text] = lines[band].split('|');
+      out.push(pushLog(state, chan, text, band === 'hot' ? 'bad' : 'warn'));
+    } else if (!band && state.bands[ch]) {
+      // Falling back below the line is worth seeing too: it is the reward
+      // for laying low, and without it the decay is invisible.
+      delete state.bands[ch];
+      out.push(pushLog(state, ch.toUpperCase(), 'interest has fallen back to baseline', 'good'));
+    }
+  }
+  return out;
 }
 
 // Beats are punctuation: fired once, deliberately, at a specific moment.

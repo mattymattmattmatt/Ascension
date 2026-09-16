@@ -31,6 +31,9 @@ jobs:
       - name: Browser smoke test
         run: PW_CHROMIUM= node tests/smoke.mjs
 
+      - name: Onboarding, objective bar and zoom lock
+        run: PW_CHROMIUM= node tests/onboarding.mjs
+
       - name: Phase tour
         run: PW_CHROMIUM= node tests/phases.mjs
 

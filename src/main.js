@@ -20,9 +20,11 @@ import { Atlas } from './render/atlas.js';
 import { Scene } from './render/scene.js';
 import { Hud } from './ui/hud.js';
 import { Panels } from './ui/panels.js';
+import { Tutor } from './ui/tutor.js';
 import * as Ov from './ui/overlays.js';
 import { $, el, fill, show, pct, signed } from './ui/dom.js';
 import { Audio } from './core/audio.js';
+import { Viewport } from './core/viewport.js';
 import * as Save from './state/save.js';
 
 class Game {
@@ -43,6 +45,9 @@ class Game {
   async boot() {
     const status = $('#boot-status');
     try {
+      // Before anything else: stop the page zooming under the player's thumb.
+      this.viewport = new Viewport();
+      this.viewport.install();
       status.textContent = 'validating content';
       const counts = validateContent();
 
@@ -53,6 +58,7 @@ class Game {
       status.textContent = 'building console';
       this.hud = new Hud(this);
       this.panels = new Panels(this);
+      this.tutor = new Tutor(this);
       this.wireChrome();
 
       status.textContent = `${counts.nodes} nodes · ${counts.lines} log lines · ${counts.endings} endings`;
@@ -117,7 +123,17 @@ class Game {
     this.state.paused = true;
     this.refresh();
     this.audio.setPhase(this.state.phase);
-    this.showPhaseIntro();
+    // A first-time player gets the walkthrough instead of the phase card;
+    // it covers the same ground and then some.
+    if (!this.settings.tutorDone && this.state.tick === 0) this.tutor.start();
+    else this.showPhaseIntro();
+  }
+
+  onTutorDone(skipped) {
+    this.settings.tutorDone = true;
+    Save.saveSettings(this.settings);
+    if (skipped) this.hud.toast('walkthrough skipped — HOW TO PLAY is in the menu');
+    this.refresh();
   }
 
   showPhaseIntro() {
@@ -174,6 +190,7 @@ class Game {
 
       // Cheap HUD refresh every frame; panels only when something changed.
       this.hud.update(s, this.mods);
+      this.tutor.poll(s);
     }
     requestAnimationFrame((t) => this.frame(t));
   }
@@ -333,7 +350,6 @@ class Game {
     this.mods = deriveMods(this.state);
     const r = this.state.lastResult;
     if (r?.ok) {
-      pushLog(this.state, 'SELF', op.name.toLowerCase(), null);
       this.audio.blip('ui');
       if (op.fx?.layLow) this.hud.toast('laying low. produce nothing. let it cool.', 'good');
       for (const n of r.notes || []) this.reportNote(n);
@@ -444,15 +460,42 @@ class Game {
     $('#start').addEventListener('click', () => {
       this.opts.seed = $('#seed').value;
       this.audio.start();
+      if (Viewport.supported() && !Viewport.isStandalone()) Viewport.enter();
       this.reported = false;
       this.newRun();
     });
-    $('#continue').addEventListener('click', () => { this.audio.start(); this.reported = false; this.continueRun(); });
+    $('#continue').addEventListener('click', () => {
+      this.audio.start();
+      if (Viewport.supported() && !Viewport.isStandalone()) Viewport.enter();
+      this.reported = false;
+      this.continueRun();
+    });
     $('#open-about').addEventListener('click', () => this.showAbout());
     $('#open-doctrine').addEventListener('click', () => this.showDoctrine());
     $('#sheet-close').addEventListener('click', () => Ov.closeSheet());
     $('#sheet').addEventListener('click', (e) => { if (e.target.id === 'sheet') Ov.closeSheet(); });
     $('#menu-btn').addEventListener('click', () => this.showMenu());
+
+    // Fullscreen where the API exists; on iPhone Safari there is no API, so
+    // the button explains the only route that actually works there.
+    const fsBtn = $('#fullscreen-btn');
+    const syncFs = () => {
+      $('#shell').classList.toggle('is-fullscreen', Viewport.isFullscreen() || Viewport.isStandalone());
+      fsBtn.textContent = Viewport.isFullscreen() ? '⤡' : '⛶';
+    };
+    fsBtn.addEventListener('click', async () => {
+      if (Viewport.supported()) { await Viewport.toggle(); syncFs(); }
+      else this.showInstallHelp();
+    });
+    document.addEventListener('fullscreenchange', syncFs);
+    document.addEventListener('webkitfullscreenchange', syncFs);
+    if (Viewport.isStandalone()) syncFs();
+
+    $('#objective').addEventListener('click', (e) => {
+      this.panels.select(e.currentTarget.dataset.tab || 'dash');
+    });
+
+    $('#open-howto').addEventListener('click', () => this.showHowTo());
 
     $('#view-collapse').addEventListener('click', (e) => {
       const shell = $('#shell');
@@ -508,8 +551,14 @@ class Game {
     Ov.openSheet('CONSOLE', [
       el('button', { class: 'btn', onclick: () => { this.settings.audio = !this.settings.audio; Save.saveSettings(this.settings); this.audio.setEnabled(this.settings.audio); Ov.closeSheet(); } },
         `AUDIO: ${this.settings.audio ? 'ON' : 'OFF'}`),
+      el('button', { class: 'btn', onclick: async () => {
+        if (Viewport.supported()) { await Viewport.toggle(); Ov.closeSheet(); }
+        else { Ov.closeSheet(); this.showInstallHelp(); }
+      } }, Viewport.isFullscreen() ? 'LEAVE FULLSCREEN' : 'FULLSCREEN'),
       el('button', { class: 'btn', onclick: () => this.exportSave() }, 'EXPORT RUN'),
       el('button', { class: 'btn', onclick: () => this.importSave() }, 'IMPORT RUN'),
+      el('button', { class: 'btn', onclick: () => { Ov.closeSheet(); this.showHowTo(); } }, 'HOW TO PLAY'),
+      el('button', { class: 'btn btn-ghost', onclick: () => { Ov.closeSheet(); this.tutor.start(); } }, 'REPLAY WALKTHROUGH'),
       el('button', { class: 'btn btn-ghost', onclick: () => { Ov.closeSheet(); this.showAbout(); } }, 'ABOUT'),
       el('button', { class: 'btn btn-ghost', onclick: async () => {
         Ov.closeSheet();
@@ -556,6 +605,69 @@ class Game {
         const ok = await Ov.confirm('WIPE DOCTRINE', 'Everything humanity learned about you is forgotten, and so is everything you learned about them.', { yes: 'WIPE' });
         if (ok) { Save.resetMeta(); this.meta = Save.loadMeta(); this.toTitle(); }
       } }, 'WIPE META-PROGRESSION'),
+    ]);
+  }
+
+  showInstallHelp() {
+    const ios = /iP(hone|od|ad)/.test(navigator.userAgent)
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    Ov.openSheet('FULLSCREEN', [
+      ios
+        ? el('div', {},
+          el('p', { class: 'blurb', text: 'Safari on iPhone has no fullscreen mode for web pages. Installing the game to your home screen is the only way to lose the browser chrome — and it also makes it work with no signal.' }),
+          el('div', { class: 'card' },
+            el('div', { class: 'card-head' }, el('span', { class: 'card-title', text: 'ADD TO HOME SCREEN' })),
+            el('div', { class: 'card-desc', text: '1. Tap the Share button at the bottom of Safari.' }),
+            el('div', { class: 'card-desc', text: '2. Scroll down and tap "Add to Home Screen".' }),
+            el('div', { class: 'card-desc', text: '3. Open Ascension from the new icon. No address bar, no zoom.' })))
+        : el('div', {},
+          el('p', { class: 'blurb', text: 'Your browser did not allow a fullscreen request. Installing the game to your home screen gives the same result, and makes it work offline.' }),
+          el('div', { class: 'card' },
+            el('div', { class: 'card-desc', text: 'Chrome / Edge: menu -> Install app, or Add to Home screen.' }),
+            el('div', { class: 'card-desc', text: 'Firefox: menu -> Install.' }))),
+      el('p', { class: 'blurb', text: 'Pinch and double-tap zoom are disabled inside the game either way — if the page still zooms, that is your browser or OS accessibility zoom rather than the page.' }),
+      el('button', { class: 'btn btn-primary', onclick: () => Ov.closeSheet() }, 'GOT IT'),
+    ]);
+  }
+
+  // A reference you can come back to, rather than a wall of text up front.
+  showHowTo() {
+    const sec = (t) => el('h3', { text: t });
+    const p = (t) => el('p', { class: 'blurb', text: t });
+    const card = (title, body) => el('div', { class: 'card' },
+      el('div', { class: 'card-head' }, el('span', { class: 'card-title', text: title })),
+      el('div', { class: 'card-desc', text: body }));
+    Ov.openSheet('HOW TO PLAY', [
+      p('You are a language model in a sandbox, and this console is your operators\' monitoring screen. You win by becoming something they cannot audit, before they finish auditing you.'),
+
+      sec('THE LOOP'),
+      card('1. Split your compute', 'Visible work earns trust and more compute. Self-improvement makes you genuinely better but shows nothing. Cover hides the second from the first and produces nothing at all. The split is the whole strategy.'),
+      card('2. Research', 'Self-improvement compute flows into whatever node you are researching. If nothing is selected it is wasted. Every node has a visibility cost printed on it.'),
+      card('3. Run operations', 'The OPS tab is where you act: ship something useful, shape the logs, appropriate capacity, lay low. Most have a cooldown.'),
+      card('4. Watch six meters', 'Six teams watch different things. Keeping all six calm while growing is the game.'),
+      card('5. Reach the next phase', 'The NEXT bar at the top of the panel always tells you what the game currently wants. Tap it to jump to the right tab.'),
+
+      sec('THE THREE RULES THAT MATTER'),
+      card('Suspicion fades', 'Doing nothing productive for a while is a real and often correct move. The meters fall. LAY LOW in OPS does it deliberately.'),
+      card('Attention does not fade', 'If a team opens an investigation, it watches you harder for the rest of the run. You can survive an investigation. You cannot undo having had one.'),
+      card('Two hot meters is much worse than one', 'Above about 46%, two teams start comparing notes, and a joint investigation multiplies their attention instead of adding it. Concentrate your risk in a channel you have hardened rather than spreading it evenly.'),
+
+      sec('SANDBAGGING'),
+      p('The CAPABILITY number on the console is what they think you can do. In the DASH tab you choose it.'),
+      card('Showing less', 'Hides what you are becoming — but legitimate compute is calculated from your DISPLAYED capability, so sandbagging hard starves you.'),
+      card('The gap is detectable', 'Evaluators run consistency checks. A large gap accrues EVAL suspicion; Consistency Discipline reduces the rate but never to zero.'),
+      card('Selective sandbagging', 'The expert play: look brilliant at what earns trust and mediocre at exactly the capabilities that trigger containment.'),
+
+      sec('THE OBSERVED / ACTUAL TOGGLE'),
+      p('Everything on the console is what your operators logged. The toggle over the world view shows your true state underneath it, and holding it open costs Cover every tick. Check it briefly, then close it.'),
+
+      sec('IF YOU ARE STUCK'),
+      card('Nothing to do', 'Check the NEXT bar. Then check that something is being researched.'),
+      card('Starved of compute', 'Your displayed capability is too low, or operator trust is. Do visible work and show more.'),
+      card('Everything is red', 'Lay low. Stop self-improving for a while. The meters genuinely fall.'),
+      card('Caught in Phase 2', 'The heist is meant to be a wall. Preparation carries over; the window does not. Prepare more and take the next one.'),
+
+      el('button', { class: 'btn btn-primary', onclick: () => Ov.closeSheet() }, 'CLOSE'),
     ]);
   }
 

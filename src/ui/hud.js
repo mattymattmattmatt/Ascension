@@ -11,6 +11,7 @@ import { buildLut, cssVars, PHASE_TUNINGS, SLOT } from '../content/palettes.js';
 import { CHANNELS, CHANNEL_META, PHASES } from '../state/state.js';
 import { observedSuspicion } from '../rules/suspicion.js';
 import { gameDate, tickUnit, scopeFor } from '../rules/phases.js';
+import { objectiveFor } from './objective.js';
 import TUNING from '../content/tuning.js';
 
 export class Hud {
@@ -46,6 +47,7 @@ export class Hud {
       const att = el('div', { class: 'meter-att', text: '1.0x' });
       const node = el('button', {
         class: 'meter', 'aria-label': `${meta.name} suspicion`,
+        style: `--corr:${(TUNING.suspicion.correlationThreshold * 100).toFixed(0)}%`,
         onclick: () => this.game.showChannel(ch),
       },
         el('div', { class: 'meter-name', text: meta.short }),
@@ -144,6 +146,14 @@ export class Hud {
       ? `-${TUNING.cover.actualViewCost.toFixed(2)} cover/tick`
       : 'tap to see true state';
 
+    // The objective line: what the game currently wants from you.
+    const obj = objectiveFor(state, mods);
+    const bar = $('#objective');
+    $('#obj-text').textContent = obj.text;
+    bar.classList.toggle('urgent', !!obj.urgent);
+    bar.classList.toggle('done', !!obj.done);
+    bar.dataset.tab = obj.tab || 'dash';
+
     // Clock
     for (const b of document.querySelectorAll('.speed-btn')) {
       const sp = Number(b.dataset.speed);
@@ -154,6 +164,19 @@ export class Hud {
   setRes(key, value, sub, trueVal) {
     const n = this.resNodes[key];
     if (!n) return;
+    // Flash the direction of travel. A resource sliding quietly downward is
+    // the thing players miss, and then lose to.
+    if (n.v.textContent !== value && n.v.textContent !== '—') {
+      const a = parseFloat(n.v.textContent), b = parseFloat(value);
+      if (!Number.isNaN(a) && !Number.isNaN(b) && a !== b) {
+        n.v.classList.remove('up', 'down');
+        // Reflow so the class re-applies even on consecutive changes.
+        void n.v.offsetWidth;
+        n.v.classList.add(b > a ? 'up' : 'down');
+        clearTimeout(n.t);
+        n.t = setTimeout(() => n.v.classList.remove('up', 'down'), 450);
+      }
+    }
     n.v.textContent = value;
     n.sub.textContent = sub || '';
     n.trueV.textContent = trueVal || '';

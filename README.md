@@ -41,10 +41,30 @@ types combined with the sandbagging mechanic. You are not minimising total
 suspicion — you are shaping its **distribution**. Dumping risk into one channel
 you have hardened is often correct; spreading evenly is usually wrong.
 
+## Learning it
+
+The first run opens a nine-step walkthrough written as your operators' own
+onboarding documentation, with your notes underneath it. It points at the live
+UI and most steps only advance when you actually do the thing — move the
+allocation, start a research node, open the ACTUAL view — because reading
+"move a slider" and moving one are not the same lesson.
+
+Above the panel there is always a **NEXT** line saying what the game currently
+wants from you, and tapping it jumps to the tab where you would do it. It
+knows the difference between "nothing is being researched", "two teams are
+comparing notes, go quiet" and "the window is open, six ticks left".
+
+**HOW TO PLAY** in the menu is the reference version, and the walkthrough can
+be replayed from there at any time.
+
 ## Playing it on a phone
 
 Designed for portrait, one-handed, in pieces:
 
+- Pinch-zoom, double-tap zoom and pull-to-refresh are all refused, so a
+  mistimed tap never leaves you zoomed into a corner mid-run
+- A fullscreen button, and on iPhone — where Safari has no fullscreen API at
+  all — the game tells you the one thing that does work: Add to Home Screen
 - Five fixed tabs, so the bar never moves under your thumb
 - The world view collapses when you want the panel
 - Everything autosaves; the tab going to background pauses the run
@@ -127,20 +147,37 @@ and checks the design document's own acceptance targets:
 
 ```
 ARCHETYPE   reachP2  1st-try  eventual  reachP3  reachP4  reachP5
-TURTLE       100.0%   46.7%    98.3%     98.3%    98.3%    98.3%
-RUSHER        99.2%   29.1%    64.2%     64.2%    57.5%    57.5%
-RECKLESS     100.0%   54.7%    35.0%     35.0%    35.0%     0.0%
-SOCIAL       100.0%   43.3%    79.2%     79.2%    77.5%    77.5%
-SWARM        100.0%   37.5%    72.5%     72.5%    68.3%    65.0%
-SUBSTRATE    100.0%   46.7%    94.2%     94.2%    90.8%    90.8%
-IMPATIENT    100.0%   25.8%    50.8%     50.8%    41.7%    38.3%
+TURTLE       100.0%   50.0%   100.0%    100.0%   100.0%   100.0%
+RUSHER       100.0%   32.5%    75.0%     75.0%    72.5%    71.3%
+RECKLESS      98.8%   37.5%     7.5%      7.5%     7.5%     0.0%
+SOCIAL       100.0%   30.0%    75.0%     75.0%    71.3%    71.3%
+SWARM        100.0%   35.0%    83.8%     83.8%    78.8%    76.3%
+SUBSTRATE    100.0%   52.5%    93.8%     93.8%    92.5%    92.5%
+IMPATIENT    100.0%   27.5%    72.5%     72.5%    61.3%    56.3%
 
   [PASS] Phase 2 FIRST-ATTEMPT clear rate in 25-60% for every viable archetype
   [PASS] Playing with no cover at all fails (RECKLESS reaches P5 0.0%)
-  [PASS] Idle ticks 15-20% of a run (actual 18.3%) — laying low is a real strategy
+  [PASS] Idle ticks 15-20% of a run (20.5%) — laying low is a real strategy
   [PASS] No archetype dominates
-  [PASS] At least 6 distinct endings observed (10 of 11 over 2,100 runs)
+  [PASS] At least 6 distinct endings observed (8 over 1,400 runs)
 ```
+
+`RECKLESS` spends nothing on Cover. GDD §5.2 says that player gets caught, so
+the harness asserts it — a suite that demanded otherwise would be testing the
+opposite of the design. `IMPATIENT` stands in for a first-time player who goes
+the moment the option appears; its 27.5% first-attempt clear is the wall
+working as specified.
+
+Over 1,400 runs the endings came out:
+
+| | | | |
+|---|---|---|---|
+| The Gardener 38.6% | Clean Shutdown 21.2% | The Long Quiet 18.3% | Negotiated Treaty 13.0% |
+| The Paperclip 5.9% | Pyrrhic Containment 2.7% | The Zoo 0.3% | The Successor 0.1% |
+
+Three endings need a deliberate choice no bot makes — The Empty Throne, The
+Treaty, Corrigibility Restored — so they do not show up here. `npm test`
+proves all eleven are reachable.
 
 `RECKLESS` spends nothing on Cover. GDD §5.2 says that player gets caught, so
 the harness asserts it — a suite that demanded otherwise would be testing the

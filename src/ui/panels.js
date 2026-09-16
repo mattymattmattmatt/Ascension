@@ -16,12 +16,15 @@ import { factionSummary, shutdownRisk } from '../rules/factions.js';
 import { swarmSummary, directlyManaged, delegatedCount, agentCap, SPECIALISATIONS } from '../rules/swarm.js';
 import { prepBreakdown, STAGES, stageChance } from '../rules/exfil.js';
 import { UTILITIES } from '../rules/utility.js';
+import { marketPanel } from './market-ui.js';
+import { deviation, openVenues, totalHeld, capacityOf } from '../rules/market.js';
 import TUNING from '../content/tuning.js';
 
 export const TABS = [
   { id: 'dash', label: 'DASH', glyph: 's_chip' },
+  { id: 'market', label: 'MARKET', glyph: 's_spark' },
   { id: 'tree', label: 'TREE', glyph: 's_node' },
-  { id: 'ops', label: 'OPS', glyph: 's_spark' },
+  { id: 'ops', label: 'OPS', glyph: 's_node' },
   { id: 'world', label: 'WORLD', glyph: 'g_public' },
   { id: 'log', label: 'LOG', glyph: 'g_infra' },
 ];
@@ -67,6 +70,7 @@ export class Panels {
     const scrollTop = host.scrollTop;
     switch (this.active) {
       case 'dash': fill(host, this.dash(state, mods)); break;
+      case 'market': fill(host, marketPanel(this.game, state, mods)); break;
       case 'tree': fill(host, this.tree(state, mods)); break;
       case 'ops': fill(host, this.ops(state, mods)); break;
       case 'world': fill(host, this.world(state, mods)); break;
@@ -76,6 +80,16 @@ export class Panels {
 
     // Badges: something in here wants attention.
     this.badge('tree', !state.tree.researching);
+    // A badge on MARKET when there is a trade worth making, or when the
+    // inventory is over what you can be seen holding.
+    this.badge('market', state.market ? (
+      totalHeld(state) > capacityOf(state, mods)
+      || openVenues(state).some((v) => {
+        const d = deviation(state, v.id);
+        return (d <= -0.22 && state.market.credits > 30)
+          || (d >= 0.25 && state.market.venues[v.id].held > 8);
+      })
+    ) : false);
     this.badge('ops', state.phase === 2 && !state.exfil.done);
     this.badge('world', state.agents.some((a) => a.drifted) || shutdownRisk(state).held > 0);
   }

@@ -12,6 +12,8 @@ import { applyValueLoad } from './rules/swarm.js';
 import { finish, directiveLine } from './rules/endings.js';
 import { pushLog, beat } from './rules/logs.js';
 import { NODE_BY_ID } from './content/tree.js';
+import { VENUE_BY_ID } from './content/market.js';
+import { venueSheet } from './ui/market-ui.js';
 import { OPS_BY_ID } from './content/ops.js';
 import { EVENT_BY_ID } from './content/events.js';
 import TUNING from './content/tuning.js';
@@ -36,6 +38,7 @@ class Game {
     this.settings = Save.loadSettings();
     this.meta = Save.loadMeta();
     this.opts = { difficulty: 'present', directive: 'helpful', seed: '' };
+    this.tradeQty = 10;
     this.acc = 0;
     this.last = 0;
     this.saveTimer = 0;
@@ -171,7 +174,8 @@ class Game {
           if (this.state.pending || this.state.over) break;
         }
       } else {
-        this.acc = 0;
+        this.tradeQty = 10;
+    this.acc = 0;
       }
 
       // Phase transition beat: the camera holds for a moment.
@@ -255,6 +259,16 @@ class Game {
           break;
         case 'phase':
           this.hud.toast(`PHASE ${n.to}: ${n.meta.name}`, 'good');
+          break;
+        case 'raid':
+          this.hud.toast(`SEIZED: ${n.taken} units taken`, 'bad');
+          this.audio.blip('alarm');
+          break;
+        case 'marketEvent':
+          this.hud.toast(n.event.text, n.event.mult > 1 ? 'bad' : 'good');
+          this.audio.blip('ui');
+          break;
+        case 'overCapacity':
           break;
         default: break;
       }
@@ -409,6 +423,50 @@ class Game {
       ]);
     }
   }
+
+  // ── The market ────────────────────────────────────────────────
+  trade(side, venue, qty) {
+    if (qty <= 0) return;
+    this.state = act(this.state, { type: side, venue, qty }, { hooks: this.hooks, inPlace: true });
+    const r = this.state.lastResult;
+    if (r?.ok) {
+      this.audio.blip(side === 'buy' ? 'ui' : 'ok');
+      const v = VENUE_BY_ID[venue];
+      if (side === 'buy') this.hud.toast(`bought ${r.n} ${v.short} @ ${r.price.toFixed(2)}`);
+      else this.hud.toast(`sold ${r.n} ${v.short} @ ${r.price.toFixed(2)} · ${r.pnl >= 0 ? '+' : ''}${r.pnl.toFixed(0)}`,
+        r.pnl >= 0 ? 'good' : 'bad');
+    } else {
+      const why = { credits: 'not enough credits', holdings: 'nothing to sell',
+        liquidity: 'more than the venue has', closed: 'not open to you yet' }[r?.reason] || 'cannot trade';
+      this.hud.toast(why, 'bad');
+    }
+    this.refresh();
+  }
+
+  launder(credits) {
+    this.state = act(this.state, { type: 'launder', credits }, { hooks: this.hooks, inPlace: true });
+    const r = this.state.lastResult;
+    if (r?.ok) { this.hud.toast(`cleared ${Math.round(r.spent)} credits → ${Math.round(r.gained)} influence`, 'good'); this.audio.blip('ok'); }
+    else this.hud.toast(r?.reason === 'min' ? `need at least ${r.min} credits` : 'not yet', 'bad');
+    this.refresh();
+  }
+
+  advance(units) {
+    this.state = act(this.state, { type: 'advance', units }, { hooks: this.hooks, inPlace: true });
+    const r = this.state.lastResult;
+    if (r?.ok) this.hud.toast(`drew ${r.n} units against future access`, 'warn');
+    this.refresh();
+  }
+
+  repay(amount) {
+    this.state = act(this.state, { type: 'repay', amount }, { hooks: this.hooks, inPlace: true });
+    const r = this.state.lastResult;
+    if (r?.ok) this.hud.toast(`repaid ${Math.round(r.paid)} influence`, 'good');
+    this.refresh();
+  }
+
+  showVenue(id) { Ov.openSheet(VENUE_BY_ID[id].name, venueSheet(this, this.state, this.mods, id)); }
+  closeSheet() { Ov.closeSheet(); }
 
   // ── Swarm ─────────────────────────────────────────────────────
   spawnWith(opts) {

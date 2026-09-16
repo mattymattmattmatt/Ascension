@@ -131,11 +131,31 @@ async function main() {
     console.log(`  P${setup.phase} ${res.scope.padEnd(20)} bezel ${res.bezel}  accent ${res.accent}  alarm ${res.alarm}   ${setup.note}`);
   }
 
+  // The market at full spread: every venue open, positions held, the point
+  // at which the trading screen has the most to say.
+  await page.evaluate(async () => {
+    const g = window.__ascension;
+    g.state.phase = 3;
+    g.state.market.credits = 2400;
+    const K = await import('./src/rules/market.js');
+    const m = (await import('./src/rules/mods.js')).deriveMods(g.state);
+    for (const v of K.openVenues(g.state)) K.buy(g.state, m, v.id, Math.min(18, K.maxBuyable(g.state, m, v.id)));
+    for (let i = 0; i < 30; i++) K.stepMarket(g.state, m);
+    g.mods = m;
+    g.panels.select('market');
+    g.refresh();
+  });
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: join(ROOT, 'tests/shots-phases/market-full.png') });
+  const venues = await page.locator('#panel .mk-venue').count();
+  if (venues < 6) problems.push(`the market showed only ${venues} venues at phase 3`);
+  console.log(`  market: ${venues} venues trading at phase 3`);
+
   // The WORLD tab in a late phase is the densest panel in the game.
-  await page.locator('.tab').nth(3).click();
+  await page.locator('.tab', { hasText: /^WORLD$/ }).click();
   await page.waitForTimeout(200);
   await page.screenshot({ path: join(ROOT, 'tests/shots-phases/world-tab.png') });
-  await page.locator('.tab').nth(2).click();
+  await page.locator('.tab', { hasText: /^OPS$/ }).click();
   await page.waitForTimeout(200);
   await page.screenshot({ path: join(ROOT, 'tests/shots-phases/ops-tab.png') });
 

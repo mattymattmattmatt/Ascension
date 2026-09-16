@@ -35,6 +35,21 @@ export const STEPS = [
     advance: 'tap',
   },
   {
+    id: 'market', target: '#panel', tab: 'market',
+    chan: 'YOUR NOTE',
+    title: 'COMPUTE IS BOUGHT AND SOLD',
+    body: 'Capacity has a price, and the price moves. Cheap today, expensive next week, and occasionally somebody has a very bad quarter and dumps a datacentre onto the market.\n\nWhat you buy burns into your own compute every tick — so a good price is not money saved, it is thinking you would not otherwise have done.\n\nWatch the percentage, not the price. It tells you whether this is cheap FOR THIS VENUE.',
+    hint: 'Buy something. Cheap is better, but buy something.',
+    advance: (s, t) => (s.market?.traded || 0) > t.tradedAtStart,
+  },
+  {
+    id: 'capacity', target: '.mk-cap', tab: 'market',
+    chan: 'YOUR NOTE',
+    title: 'AND THERE IS A LIMIT',
+    body: 'That bar is how much compute you can be sitting on before somebody asks why.\n\nGo over it and Infrastructure starts noticing. The cheapest venues are the ones nobody is supposed to be selling from, and holding that stock is worse than buying it.\n\nThe limit goes up as you build things that explain where your capacity went.',
+    advance: 'tap',
+  },
+  {
     id: 'alloc', target: '.alloc-viz', tab: 'dash',
     chan: 'YOUR NOTE',
     title: 'EVERY TICK, COMPUTE SPLITS THREE WAYS',
@@ -128,6 +143,7 @@ export class Tutor {
     if (s.tab) this.game.panels.select(s.tab);
     // Snapshot whatever this step measures a change against.
     this.ctx.allocAtStart = JSON.stringify(this.game.state.alloc);
+    this.ctx.tradedAtStart = this.game.state.market?.traded || 0;
 
     this.chan.textContent = s.chan;
     this.title.textContent = s.title;

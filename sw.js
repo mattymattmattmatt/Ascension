@@ -5,7 +5,7 @@
 // and on a phone with no signal. That matters more for this game than for
 // most, because a run is six hours long and picked up in pieces.
 
-const VERSION = '5771ce42e258';
+const VERSION = '5955e928fb1b';
 const CACHE = 'ascension-' + VERSION;
 const ASSETS = [
   "./assets/favicon.png",
@@ -25,6 +25,7 @@ const ASSETS = [
   "./src/content/events.js",
   "./src/content/factions.js",
   "./src/content/logs.js",
+  "./src/content/market.js",
   "./src/content/ops.js",
   "./src/content/palettes.js",
   "./src/content/tree.js",
@@ -42,6 +43,7 @@ const ASSETS = [
   "./src/rules/factions.js",
   "./src/rules/index.js",
   "./src/rules/logs.js",
+  "./src/rules/market.js",
   "./src/rules/mods.js",
   "./src/rules/ops.js",
   "./src/rules/phases.js",
@@ -54,6 +56,7 @@ const ASSETS = [
   "./src/state/state.js",
   "./src/ui/dom.js",
   "./src/ui/hud.js",
+  "./src/ui/market-ui.js",
   "./src/ui/objective.js",
   "./src/ui/overlays.js",
   "./src/ui/panels.js",

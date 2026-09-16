@@ -128,6 +128,21 @@ export const TUNING = Object.freeze({
     freezePenalty: 0.55, // eval escalation freezes deployment
   },
 
+  // ── The compute market ────────────────────────────────────────────
+  market: {
+    // Holdings are drawn into usable compute every tick. This is the whole
+    // payoff of trading: a bank of cheap compute makes you cleverer, faster,
+    // continuously — and it depletes, so you have to keep dealing.
+    drawRate: 0.055,
+    // Credits are the trading currency. You earn them by being useful: a
+    // deployed model that people pay for. Lemonade Stand's daily takings.
+    creditBase: 0.55,
+    creditPerDeploy: 2.2,
+    // Selling compute you are not using is the other income, and the
+    // arbitrage is the difference between the two.
+    startingCredits: 40,
+  },
+
   // ── Influence & substrate ─────────────────────────────────────────────
   influence: {
     start: 0,

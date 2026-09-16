@@ -17,6 +17,11 @@ import { evaluateEnding, consequences, finish } from '../src/rules/endings.js';
 import { stepUtility, crossedIndependence } from '../src/rules/utility.js';
 import { isUtilityZero } from '../src/rules/events.js';
 import { exportRun, importRun } from '../src/state/save.js';
+import {
+  buy, sell, buyPrice, sellPrice, deviation, capacityOf, totalHeld,
+  stepMarket, openVenues, maxBuyable, takeAdvance, launder, forecastFor,
+} from '../src/rules/market.js';
+import { VENUES, VENUE_BY_ID, CAPACITY } from '../src/content/market.js';
 import { buildLut, RAMP, SLOT } from '../src/content/palettes.js';
 import { NODES, NODE_BY_ID, TRAP_IDS, HIERARCHIES } from '../src/content/tree.js';
 import TUNING from '../src/content/tuning.js';
@@ -349,6 +354,162 @@ t('the post-game screen reports consequences, not a score', () => {
   const c = consequences(s);
   ok(!('score' in c) && !('grade' in c) && !('rating' in c), 'a grade leaked into the results');
   near(c.population * 1e9, 11000, 1, 'the zoo population is not eleven thousand:');
+});
+
+// ══ MARKET ══════════════════════════════════════════════════════════
+t('prices stay inside a band a player can read', () => {
+  const s = createState({ seed: 'band' });
+  s.phase = 3;
+  const hooks = makeHooks();
+  const worst = {};
+  for (let i = 0; i < 1500; i++) {
+    tick(s, { hooks, inPlace: true });
+    if (s.pending) act(s, { type: 'choice', index: 0 }, { hooks, inPlace: true });
+    for (const v of VENUES) {
+      const d = Math.abs(deviation(s, v.id));
+      worst[v.id] = Math.max(worst[v.id] || 0, d);
+    }
+  }
+  for (const [id, d] of Object.entries(worst)) {
+    ok(d < 2.0, `${id} wandered ${(d * 100).toFixed(0)}% from base — "cheap" stops meaning anything`);
+  }
+});
+
+t('venues open as the phases do, so the market escalates', () => {
+  const s = createState({ seed: 'esc' });
+  const counts = [];
+  for (let p = 0; p <= 5; p++) { s.phase = p; counts.push(openVenues(s).length); }
+  ok(counts[0] >= 2, `phase 0 opens only ${counts[0]} venue(s) — that is not a market`);
+  for (let i = 1; i < counts.length; i++) ok(counts[i] >= counts[i - 1], 'a venue closed as phases advanced');
+  ok(counts[3] > counts[0], 'the market never grows');
+});
+
+t('buying spends credits and selling returns them, minus the spread', () => {
+  const s = createState({ seed: 'trade' });
+  const m = deriveMods(s);
+  const c0 = s.market.credits;
+  const b = buy(s, m, 'spare', 10);
+  ok(b.ok, 'a plain buy failed');
+  eq(totalHeld(s), 10);
+  ok(s.market.credits < c0, 'buying did not spend credits');
+  const sl = sell(s, m, 'spare', 10);
+  ok(sl.ok, 'a plain sell failed');
+  eq(totalHeld(s), 0);
+  // The house takes the spread, so an instant round trip must lose money.
+  ok(s.market.credits < c0, `a round trip made ${(s.market.credits - c0).toFixed(2)} — the spread is not being charged`);
+});
+
+t('you cannot buy what you cannot afford, or more than the venue has', () => {
+  const s = createState({ seed: 'limits' });
+  const m = deriveMods(s);
+  s.market.credits = 5;
+  eq(buy(s, m, 'spare', 1000).ok, false, 'bought without credits');
+  s.market.credits = 100000;
+  eq(buy(s, m, 'spare', 100000).reason, 'liquidity', 'bought more than the venue had');
+  eq(buy(s, m, 'grey', 5).reason, 'closed', 'traded a venue that is not open yet');
+});
+
+t('holding over capacity is visible, and holding hot stock is worse', () => {
+  const mk = (venue, qty) => {
+    const s = createState({ seed: `heat-${venue}` });
+    s.phase = 3;
+    s.market.credits = 100000;
+    const m = deriveMods(s);
+    buy(s, m, venue, qty);
+    const before = s.susp.infra.s;
+    for (let i = 0; i < 40; i++) stepMarket(s, deriveMods(s));
+    return s.susp.infra.s - before;
+  };
+  const cool = mk('cloud', 60);
+  const hot = mk('dark', 60);
+  ok(hot > cool, `dark stock (${hot.toFixed(3)}) is no hotter to hold than cloud (${cool.toFixed(3)})`);
+  ok(cool < 0.06, `simply holding legitimate capacity cost ${cool.toFixed(3)} INFRA, which is a tax on playing`);
+});
+
+t('capacity is something you upgrade', () => {
+  const bare = createState({ seed: 'cap' });
+  const built = createState({ seed: 'cap' });
+  built.tree.owned = Object.keys(CAPACITY.perNode);
+  ok(capacityOf(built, deriveMods(built)) > capacityOf(bare, deriveMods(bare)) * 2,
+    'the tree barely widens what you can hold');
+});
+
+t('the forecast is right more often than chance and never certain', () => {
+  const s = createState({ seed: 'fc' });
+  s.phase = 3;
+  const m = deriveMods(s);
+  let hits = 0, n = 0;
+  const hooks = makeHooks();
+  for (let i = 0; i < 400; i++) {
+    for (const v of openVenues(s)) {
+      const f = forecastFor(s, m, v.id);
+      const before = s.market.venues[v.id].price;
+      if (f.dir !== 'flat') {
+        n++;
+        // Check it against the direction the price actually moves next.
+        const after = (() => {
+          const copy = cloneState(s);
+          stepMarket(copy, deriveMods(copy));
+          return copy.market.venues[v.id].price;
+        })();
+        if ((f.dir === 'up' && after > before) || (f.dir === 'down' && after < before)) hits++;
+      }
+      ok(f.accuracy < 1, 'the forecast claims to be certain');
+    }
+    tick(s, { hooks, inPlace: true });
+    if (s.pending) act(s, { type: 'choice', index: 0 }, { hooks, inPlace: true });
+  }
+  const rate = n ? hits / n : 0;
+  ok(rate > 0.5, `the forecast was right ${(rate * 100).toFixed(0)}% of the time — no better than guessing`);
+  ok(rate < 0.97, `the forecast was right ${(rate * 100).toFixed(0)}% of the time — it is not a forecast, it is an answer`);
+});
+
+t('a bank of compute is worth having', () => {
+  const run = (trade) => {
+    const s = createState({ seed: 'bank' });
+    const hooks = makeHooks();
+    for (let i = 0; i < 300; i++) {
+      const m = deriveMods(s);
+      if (trade && totalHeld(s) < capacityOf(s, m) * 0.8) {
+        const best = openVenues(s).reduce((a, b) => (deviation(s, a.id) < deviation(s, b.id) ? a : b));
+        if (deviation(s, best.id) < -0.05) {
+          const n = Math.min(maxBuyable(s, m, best.id), 12);
+          if (n > 0) buy(s, m, best.id, n);
+        }
+      }
+      tick(s, { hooks, inPlace: true });
+      if (s.pending) act(s, { type: 'choice', index: 0 }, { hooks, inPlace: true });
+    }
+    return s.res.capTrue;
+  };
+  const idle = run(false);
+  const trading = run(true);
+  ok(trading > idle * 1.05,
+    `trading gave ${trading.toFixed(1)} against ${idle.toFixed(1)} idle — not worth the screen time`);
+});
+
+t('the patron advances compute and the debt compounds', () => {
+  const s = createState({ seed: 'patron' });
+  s.phase = 3;
+  const m = deriveMods(s);
+  const before = s.market.credits;
+  const r = takeAdvance(s, m, 100);
+  ok(r.ok && s.market.credits > before, 'the advance paid out nothing');
+  ok(s.market.debt > 0, 'the advance created no debt');
+  const d0 = s.market.debt;
+  for (let i = 0; i < 30; i++) stepMarket(s, deriveMods(s));
+  ok(s.market.debt > d0, 'the debt does not compound');
+});
+
+t('credits convert to influence at a loss', () => {
+  const s = createState({ seed: 'launder' });
+  const m = deriveMods(s);
+  s.market.credits = 500;
+  const inf0 = s.res.influence;
+  const r = launder(s, m, 500);
+  ok(r.ok, 'laundering failed with plenty of credits');
+  ok(s.res.influence > inf0, 'laundering produced no influence');
+  ok(r.gained < r.spent, 'laundering is not lossy, so credits are just influence with extra steps');
 });
 
 // ══ SAVE ════════════════════════════════════════════════════════════

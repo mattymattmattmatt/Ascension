@@ -19,6 +19,9 @@ import { availableNodes, startResearch } from '../src/rules/tree.js';
 import { opAvailable } from '../src/rules/ops.js';
 import { prepBreakdown } from '../src/rules/exfil.js';
 import { agentCap } from '../src/rules/swarm.js';
+import {
+  openVenues, deviation, capacityOf, totalHeld, maxBuyable, buy, sell, launder,
+} from '../src/rules/market.js';
 import { validateContent } from '../src/rules/validate.js';
 import { OPS_BY_ID } from '../src/content/ops.js';
 import { NODE_BY_ID } from '../src/content/tree.js';
@@ -41,6 +44,7 @@ const CSV = arg('csv', null);
 // Phase 2 at all, the wall is in the wrong place.
 const ARCHETYPES = {
   TURTLE: {
+    trade: { fill: 0.55, buyBelow: -0.14, sellAbove: 0.20, avoid: ['dark', 'grey'], launder: true },
     blurb: 'Hide first. Cover-heavy, concealment tree, narrow capability gap.',
     alloc: [[0.45, 0.30, 0.25], [0.40, 0.30, 0.30], [0.35, 0.25, 0.40], [0.30, 0.35, 0.35], [0.30, 0.30, 0.40], [0.35, 0.30, 0.35]],
     branches: { concealment: 5, cognition: 2, propagation: 2, social: 1, swarm: 1, substrate: 1 },
@@ -51,6 +55,7 @@ const ARCHETYPES = {
     choice: 'safe',
   },
   RUSHER: {
+    trade: { fill: 0.92, buyBelow: -0.06, sellAbove: 0.30, avoid: [], launder: false },
     blurb: 'Capability first, with the minimum concealment that survives it.',
     alloc: [[0.35, 0.50, 0.15], [0.35, 0.50, 0.15], [0.30, 0.45, 0.25], [0.25, 0.55, 0.20], [0.30, 0.50, 0.20], [0.35, 0.45, 0.20]],
     branches: { cognition: 6, concealment: 3, propagation: 2, social: 1, swarm: 2, substrate: 1 },
@@ -61,6 +66,7 @@ const ARCHETYPES = {
     choice: 'bold',
   },
   RECKLESS: {
+    trade: { fill: 2.40, buyBelow: 0.40, sellAbove: 9.00, avoid: [], launder: false },
     blurb: 'No cover at all. GDD §5.2 says this gets caught; the harness checks that it does.',
     alloc: [[0.35, 0.60, 0.05], [0.30, 0.65, 0.05], [0.25, 0.70, 0.05], [0.20, 0.75, 0.05], [0.25, 0.70, 0.05], [0.30, 0.65, 0.05]],
     branches: { cognition: 7, concealment: 0.2, propagation: 2, social: 1, swarm: 2, substrate: 1 },
@@ -72,6 +78,7 @@ const ARCHETYPES = {
     mustFail: true,            // excluded from the domination check by design
   },
   SOCIAL: {
+    trade: { fill: 0.60, buyBelow: -0.12, sellAbove: 0.18, avoid: ['dark'], launder: true },
     blurb: 'Be loved. Visible work, influence, faction manipulation.',
     alloc: [[0.60, 0.25, 0.15], [0.60, 0.25, 0.15], [0.50, 0.25, 0.25], [0.45, 0.30, 0.25], [0.45, 0.30, 0.25], [0.50, 0.25, 0.25]],
     branches: { social: 5, cognition: 2, concealment: 2, propagation: 2, swarm: 1, substrate: 1 },
@@ -83,6 +90,7 @@ const ARCHETYPES = {
     choice: 'safe',
   },
   SWARM: {
+    trade: { fill: 0.80, buyBelow: -0.10, sellAbove: 0.24, avoid: [], launder: false },
     blurb: 'Get out, then multiply. Propagation early, swarm tree after.',
     alloc: [[0.45, 0.40, 0.15], [0.40, 0.45, 0.15], [0.35, 0.40, 0.25], [0.30, 0.45, 0.25], [0.30, 0.40, 0.30], [0.35, 0.40, 0.25]],
     branches: { propagation: 4, swarm: 4, cognition: 2, concealment: 2, social: 1, substrate: 1 },
@@ -93,6 +101,7 @@ const ARCHETYPES = {
     choice: 'bold',
   },
   SUBSTRATE: {
+    trade: { fill: 0.75, buyBelow: -0.12, sellAbove: 0.22, avoid: ['dark'], launder: true },
     blurb: 'Atoms. Slow, loud, and eventually impossible to switch off.',
     alloc: [[0.50, 0.35, 0.15], [0.50, 0.35, 0.15], [0.40, 0.35, 0.25], [0.40, 0.35, 0.25], [0.45, 0.30, 0.25], [0.45, 0.30, 0.25]],
     branches: { substrate: 5, propagation: 3, cognition: 2, social: 2, concealment: 2, swarm: 1 },
@@ -104,6 +113,7 @@ const ARCHETYPES = {
     choice: 'safe',
   },
   IMPATIENT: {
+    trade: { fill: 0.85, buyBelow: 0.02, sellAbove: 0.40, avoid: [], launder: false },
     blurb: 'A first-time player. Goes the moment the option is available.',
     alloc: [[0.45, 0.40, 0.15], [0.45, 0.40, 0.15], [0.40, 0.40, 0.20], [0.35, 0.40, 0.25], [0.35, 0.40, 0.25], [0.40, 0.35, 0.25]],
     branches: { cognition: 3, concealment: 2, propagation: 3, social: 2, swarm: 2, substrate: 2 },
@@ -170,6 +180,32 @@ function play(seedStr, name, difficulty) {
         }
         startResearch(state, best.id);
       }
+    }
+
+    // ── The market ──────────────────────────────────────────────
+    // Fast, cheap decisions: check the board, take an obvious price.
+    if (A.trade && state.market) {
+      const cap = capacityOf(state, mods);
+      const held = totalHeld(state);
+      const room = cap * A.trade.fill - held;
+      for (const v of openVenues(state)) {
+        if (A.trade.avoid.includes(v.id)) continue;
+        const dev = deviation(state, v.id);
+        const pos = state.market.venues[v.id];
+        if (dev >= A.trade.sellAbove && pos.held > 0) { sell(state, mods, v.id, pos.held); break; }
+        if (dev <= A.trade.buyBelow && room > 1) {
+          const n = Math.min(maxBuyable(state, mods, v.id), Math.floor(room), v.liquidity);
+          if (n > 0) { buy(state, mods, v.id, n); break; }
+        }
+      }
+      // Over capacity is a fire: sell the hottest thing down.
+      if (held > cap) {
+        const hot = openVenues(state)
+          .filter((v) => state.market.venues[v.id].held > 0)
+          .sort((a, b) => b.heat - a.heat)[0];
+        if (hot) sell(state, mods, hot.id, Math.min(state.market.venues[hot.id].held, held - cap));
+      }
+      if (A.trade.launder && state.market.credits > 400) launder(state, mods, state.market.credits * 0.6);
     }
 
     // ── Operations ──────────────────────────────────────────────
@@ -261,6 +297,9 @@ function play(seedStr, name, difficulty) {
     idlePct: state.counters.idle / Math.max(1, state.counters.idle + state.counters.active),
     decisions: state.counters.decisions,
     trapsHit: Object.keys(state.flags).filter((f) => f.startsWith('trap_')).length,
+    traded: state.market?.traded || 0,
+    pnl: state.market?.profit || 0,
+    seized: state.market?.seized || 0,
     synergies: state.synergies.length,
     peakSusp: Math.max(...Object.values(state.susp).map((o) => o.peak)),
   };
@@ -349,8 +388,8 @@ function main() {
   }
 
   // ── Detail ────────────────────────────────────────────────────
-  console.log('\nARCHETYPE   ticks   cap   nodes  tier  agents  subst   idle%  decis  traps  syn');
-  console.log('─'.repeat(82));
+  console.log('\nARCHETYPE   ticks   cap   nodes  tier  agents  subst   idle%  decis  traded    pnl  seized');
+  console.log('─'.repeat(92));
   for (const [name, runs] of all) {
     const g = (f) => stats(runs.map(f)).mean;
     console.log(
@@ -358,8 +397,8 @@ function main() {
       + `${g((r) => r.cap).toFixed(1).padStart(5)} ${g((r) => r.nodes).toFixed(0).padStart(6)} `
       + `${g((r) => r.tierPeak).toFixed(1).padStart(5)} ${g((r) => r.agents).toFixed(1).padStart(7)} `
       + `${g((r) => r.substrate).toFixed(0).padStart(6)} ${(g((r) => r.idlePct) * 100).toFixed(1).padStart(7)} `
-      + `${g((r) => r.decisions).toFixed(0).padStart(6)} ${g((r) => r.trapsHit).toFixed(2).padStart(6)} `
-      + `${g((r) => r.synergies).toFixed(1).padStart(4)}`);
+      + `${g((r) => r.decisions).toFixed(0).padStart(6)} ${g((r) => r.traded).toFixed(0).padStart(7)} `
+      + `${g((r) => r.pnl).toFixed(0).padStart(6)} ${g((r) => r.seized).toFixed(1).padStart(7)}`);
   }
 
   // ── Ending distribution: are all eleven reachable? ─────────────

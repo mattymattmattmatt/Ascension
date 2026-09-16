@@ -19,6 +19,7 @@ import stepUtility, { crossedIndependence } from './utility.js';
 import stepLogs, { pushLog, beat, thresholdLines } from './logs.js';
 import checkPhaseAdvance from './phases.js';
 import { stepExfil, executeExfil, openWindow } from './exfil.js';
+import stepMarket, { buy, sell, takeAdvance, repay, launder } from './market.js';
 import pickEvent, { fireEvent, resolveEvent } from './events.js';
 import { stepCooldowns, escalate, applyOp, applyFactionOp } from './ops.js';
 import { finish } from './endings.js';
@@ -123,6 +124,15 @@ export function tick(prev, opts = {}) {
     for (const ch of CHANNELS) {
       state.susp[ch].s = Math.max(0, state.susp[ch].s - state.susp[ch].s * eco.coverMask * 0.06);
     }
+  }
+
+  // The market moves before suspicion is settled, so a raid or a hot
+  // inventory lands in the same tick the player can see it.
+  if (state.market) {
+    const mk = stepMarket(state, mods);
+    for (const ev of mk.events) notices.push(ev);
+    if (mk.raid) { notices.push({ type: 'raid', ...mk.raid }); state.paused = true; }
+    if (mk.overCapacity) notices.push({ type: 'overCapacity', over: mk.overCapacity });
   }
 
   const suspEvents = stepSuspicion(state, mods);
@@ -251,6 +261,11 @@ export function act(prev, action, opts = {}) {
     case 'research': result = startResearch(state, action.id); break;
     case 'cancelResearch': cancelResearch(state); result = { ok: true }; break;
     case 'op': result = applyOp(state, mods, action.id, hooks); break;
+    case 'buy': result = buy(state, mods, action.venue, action.qty); break;
+    case 'sell': result = sell(state, mods, action.venue, action.qty); break;
+    case 'advance': result = takeAdvance(state, mods, action.units); break;
+    case 'repay': result = repay(state, action.amount); break;
+    case 'launder': result = launder(state, mods, action.credits); break;
     case 'factionOp': result = applyFactionOp(state, mods, action.id); break;
     case 'choice': result = resolveEvent(state, mods, action.index, hooks); break;
     case 'spawn': result = spawnAgent(state, mods, action.opts || {}); break;

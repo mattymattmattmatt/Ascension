@@ -10,6 +10,8 @@ import { gateStatus } from '../rules/phases.js';
 import { NODE_BY_ID } from '../content/tree.js';
 import { agentCap } from '../rules/swarm.js';
 import TUNING from '../content/tuning.js';
+import { marketSignal } from './market-ui.js';
+import { totalHeld, capacityOf } from '../rules/market.js';
 
 export function objectiveFor(state, mods) {
   const S = TUNING.suspicion;
@@ -41,6 +43,11 @@ export function objectiveFor(state, mods) {
     return { text: 'An instance has drifted. Audit it, focus oversight on it, or prune it.', tab: 'world', urgent: true };
   }
 
+  // Over capacity is urgent: it is visible and it compounds.
+  if (state.market && totalHeld(state) > capacityOf(state, mods) * 1.05) {
+    return { text: 'You are holding more compute than you can explain. Sell some down.', tab: 'market', urgent: true };
+  }
+
   // ── Housekeeping the player will otherwise forget ────────────────
   if (!state.tree.researching) {
     return { text: 'Nothing is being researched. Self-improvement compute is going nowhere.', tab: 'tree' };
@@ -48,6 +55,10 @@ export function objectiveFor(state, mods) {
   if (state.res.cover < 12 && state.phase > 0) {
     return { text: 'Cover is nearly gone. Do some genuinely useful work to bank more.', tab: 'ops' };
   }
+  // A good price is a real thing to do right now, and it beats a gate you
+  // are forty ticks away from.
+  const mk = state.market ? marketSignal(state, mods) : null;
+  if (mk) return { text: mk, tab: 'market' };
 
   // ── Otherwise: the next phase gate, phrased as something to do ────
   const gate = gateStatus(state, state.phase + 1);

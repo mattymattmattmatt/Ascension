@@ -442,9 +442,10 @@ input[type=range]::-moz-range-thumb {
   background: var(--c-panelDeep); border-top: 1px solid var(--c-chrome);
 }
 .tab {
-  min-height: 52px; padding: 5px 2px;
+  min-height: 52px; padding: 5px 1px;
+  font-size: 11px;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-  color: var(--c-textDim); font-size: 12px; letter-spacing: 0.06em;
+  color: var(--c-textDim); letter-spacing: 0.02em;
   border-top: 2px solid transparent;
 }
 .tab[aria-selected="true"] { color: var(--c-accentHi); border-top-color: var(--c-accent); background: var(--c-panel); }
@@ -464,6 +465,67 @@ input[type=range]::-moz-range-thumb {
 .speed-btn[aria-pressed="true"] { color: var(--c-accentHi); border-color: var(--c-chrome); background: var(--c-panel); }
 .tick-readout { min-width: 82px; text-align: right; color: var(--c-textDim); font-size: 14px; padding-right: 4px; }
 .tick-unit { margin-left: 4px; opacity: 0.7; }
+
+/* ── MARKET ──────────────────────────────────────────────────────── */
+.mk-top { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--c-chrome); margin-bottom: 6px; }
+.mk-stat { background: var(--c-panelDeep); padding: 5px 7px; text-align: center; }
+.mk-k { display: block; font-size: 10px; letter-spacing: 0.12em; color: var(--c-textDim); }
+.mk-v { display: block; font-size: 18px; color: var(--c-textHi); line-height: 1.15; }
+.mk-v.good { color: var(--c-ok); }
+.mk-v.bad { color: var(--c-alarmHi); }
+
+.mk-cap { height: 6px; background: var(--c-panel); border: 1px solid var(--c-chrome); margin-bottom: 5px; }
+.mk-cap > i { display: block; height: 100%; background: var(--c-dataMid); transition: width 0.3s; }
+.mk-cap.over > i { background: var(--c-alarm); }
+
+.mk-qwrap { display: flex; align-items: center; gap: 8px; margin: 8px 0 10px; }
+.mk-qty { display: flex; gap: 4px; flex: 1; }
+.mk-qbtn {
+  flex: 1; min-height: 36px; font-size: 14px; letter-spacing: 0.06em;
+  border: 1px solid var(--c-chrome); border-radius: var(--radius);
+  background: var(--c-panelDeep); color: var(--c-textMid);
+}
+.mk-qbtn[aria-pressed="true"] { border-color: var(--c-accent); color: var(--c-accentHi); background: var(--c-panel); }
+
+.mk-venue {
+  background: var(--c-panelDeep); border: 1px solid var(--c-panelHi);
+  border-radius: var(--radius); padding: 7px 9px; margin-bottom: 7px;
+}
+.mk-venue.bargain { border-color: var(--c-ok); }
+.mk-venue.premium { border-color: var(--c-alarmMid); }
+
+.mk-head { display: flex; align-items: center; gap: 7px; width: 100%; text-align: left; min-height: 30px; }
+.mk-name { flex: 0 0 auto; font-size: 15px; letter-spacing: 0.08em; color: var(--c-text); }
+.mk-price { flex: 0 0 auto; font-size: 17px; color: var(--c-textHi); }
+.mk-dev { flex: 1; font-size: 15px; color: var(--c-textDim); }
+.mk-dev.down { color: var(--c-ok); }
+.mk-dev.up { color: var(--c-alarmHi); }
+
+.spark { flex: 0 0 62px; height: 18px; }
+.spark-base { fill: var(--c-chrome); }
+.spark-up { fill: var(--c-alarmMid); }
+.spark-down { fill: var(--c-okMid); }
+.spark-empty { flex: 0 0 62px; }
+
+.mk-line { display: flex; gap: 8px; align-items: baseline; font-size: 13px; margin-top: 3px; }
+.mk-fc { color: var(--c-textDim); }
+.mk-hold { flex: 1; color: var(--c-textMid); }
+.mk-hold.dim { color: var(--c-textDim); opacity: 0.7; }
+.mk-pnl.good { color: var(--c-ok); }
+.mk-pnl.bad { color: var(--c-alarmHi); }
+
+.mk-flag {
+  margin-top: 5px; padding: 4px 7px; font-size: 13px;
+  background: var(--c-panel); border-left: 2px solid var(--c-accent); color: var(--c-textHi);
+}
+.mk-venue.premium .mk-flag { border-left-color: var(--c-alarm); }
+
+.mk-actions { display: flex; gap: 6px; margin-top: 6px; }
+.mk-actions .btn { min-height: 40px; font-size: 14px; letter-spacing: 0.06em; }
+.mk-buy[disabled], .mk-sell[disabled] { opacity: 0.35; }
+.mk-buy.warn { border-color: var(--c-alarmMid); color: var(--c-alarmHi); }
+.mk-fc.up { color: var(--c-alarmHi); }
+.mk-fc.down { color: var(--c-ok); }
 
 /* ── LOG PANE ─────────────────────────────────────────────────────── */
 .log { font-size: 14px; line-height: 1.3; }

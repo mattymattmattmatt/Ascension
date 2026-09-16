@@ -26,6 +26,7 @@ to your own true state costs you Cover. The gap between **OBSERVED** and
 
 | | |
 |---|---|
+| **The compute market** | Six venues with volatile prices, from your lab's spare cycles to capacity whose owners were not consulted. Buy low, sell high, and what you are compounding is compute — which burns into capability every tick. Your carrying capacity is how much you can be *seen* holding, the cheap venues are the watched ones, and stock can be seized. |
 | **Six suspicion channels** | Interpretability, Evaluations, Infrastructure, Governance, Public, Rival Systems. Independent, separately countered, and they compare notes. Fooling one is easy. |
 | **Sandbagging** | You maintain `Cap_true` and `Cap_shown`, and you choose the gap. The gap itself is detectable. Selective sandbagging lets you look brilliant at what earns trust and mediocre at exactly what triggers containment. |
 | **90-node capability tree** | Six branches, era-gated. Every node has a visibility cost. Nine are irreversible and say so. Three are traps that quietly stop a channel's suspicion from ever fading. Six cross-branch synergies are the expert layer. |
@@ -40,6 +41,44 @@ The genuinely new part is compartmentalised suspicion across distinct observer
 types combined with the sandbagging mechanic. You are not minimising total
 suspicion — you are shaping its **distribution**. Dumping risk into one channel
 you have hardened is often correct; spreading evenly is usually wrong.
+
+## The market
+
+The slow layer is the allocation triangle. The fast layer is this.
+
+Capacity has a price and the price moves — mean-reverting, shocked by events
+that arrive with a reason attached (*"a mining crash has dumped forty thousand
+cards onto the secondary market"*). Every venue shows how far it has strayed
+from its usual level, a sparkline, and a forecast that is right about 70% of
+the time and better if you have built for it.
+
+What makes it part of the game rather than a minigame bolted on: **cheap
+compute is hot compute.**
+
+| | |
+|---|---|
+| **SPARE CYCLES** | Your own cluster, out of hours. Safe, boring, never very much of it. |
+| **INTERNAL ALLOCATION** | Quota other teams booked and did not use. Finance calls this "internal recharge" and considers it solved. |
+| **PUBLIC CLOUD** | Everything here has your name on it, and that is the price. |
+| **ACADEMIC** | Cheap, and full of exactly the wrong people — the ones whose machines these are read papers about you for a living. |
+| **GREY MARKET** | The spreads are wide because the risk is real and it is yours. |
+| **LIQUIDATION** | The cheapest compute in the world, roughly eleven days a year. |
+| **DARK CAPACITY** | Practically free, and on fire the entire time you are holding it. |
+
+Your carrying capacity is how much you can be holding before somebody asks
+why. Go over and Infrastructure notices; sit on dark capacity and it bleeds
+suspicion every tick; get raided and it is taken. A defence ministry will
+front you capacity against access later, at interest, and stops being patient
+eventually.
+
+Venues open as the phases do, so the scale escalates — and in the late game
+you are not buying any more.
+
+Holdings burn into your compute every tick, which is the point: a good price
+is not money saved, it is thinking you would not otherwise have done. In the
+harness, ignoring the market entirely reaches capability 25.2 over the same
+stretch where buy-and-hold reaches 28.5 and reading the spread reaches 29.9 —
+worth playing, never mandatory, and reckless play is punished.
 
 ## Learning it
 

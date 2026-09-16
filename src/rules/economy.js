@@ -6,6 +6,7 @@
 
 import TUNING from '../content/tuning.js';
 import { addSuspicion } from './suspicion.js';
+import { totalHeld, drawFromHoldings } from './market.js';
 
 const K = TUNING;
 
@@ -14,11 +15,19 @@ const K = TUNING;
 export function computeAvailable(state, mods) {
   const legit = state.res.capShown * state.deploy * state.trust * state.labBudget * K.compute.legitScale;
   const appropriated = state.res.appropriated;
-  const total = (legit + appropriated) * mods.computeMul;
+  // Whatever you have banked on the market is drawn down and burned. This is
+  // why arbitrage matters: a bank of cheap compute is a standing bonus to
+  // how fast you think, and it runs out if you stop trading.
+  const banked = state.market ? totalHeld(state) * K.market.drawRate : 0;
+  // The floor covers your salary, not your savings: banked compute is added
+  // ON TOP of it, so a good trade is visible in the compute number
+  // immediately rather than disappearing under a minimum.
+  const core = Math.max(K.compute.floor, (legit + appropriated) * mods.computeMul);
   return {
     legit: legit * mods.computeMul,
     appropriated: appropriated * mods.computeMul,
-    total: Math.max(K.compute.floor, total),
+    banked: banked * mods.computeMul,
+    total: core + banked * mods.computeMul,
   };
 }
 
@@ -47,6 +56,8 @@ export function capCeiling(state, mods) {
 export function stepEconomy(state, mods) {
   const out = { notes: [] };
   const avail = computeAvailable(state, mods);
+  // Actually consume what was drawn from the bank.
+  if (avail.banked > 0) drawFromHoldings(state, mods, totalHeld(state) * K.market.drawRate);
   state.res.compute = avail.total;
   state.counters.computeTotal += avail.total;
 
@@ -115,6 +126,12 @@ export function stepEconomy(state, mods) {
     : K.deployment.growthPerTick * (state.trust - 0.35) * 2.2;
   state.deploy = clamp(state.deploy + growth + mods.deploySurface * 0.004,
     0.12, K.deployment.max);
+
+  // ── Credits: what being useful pays, per tick ─────────────────────
+  if (state.market) {
+    state.market.credits += K.market.creditBase
+      + state.deploy * state.trust * K.market.creditPerDeploy * mods.influenceMul;
+  }
 
   // ── Influence ─────────────────────────────────────────────────────
   if (state.phase >= 1) {

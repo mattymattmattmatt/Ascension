@@ -83,14 +83,18 @@ await page.waitForSelector('#shell:not([hidden])');
 await page.waitForSelector('.tutor:not([hidden])', { timeout: 4000 }).catch(() => problems.push('the walkthrough did not start on a first run'));
 
 const titles = [];
-for (let i = 0; i < 12; i++) {
+for (let i = 0; i < 16; i++) {
   if (await page.locator('.tutor[hidden]').count()) break;
   const t = await page.locator('.tutor-title').textContent();
   titles.push(t);
   await snap(`tutor-${i}`);
 
   // Do what the step asks, so the auto-advance paths are exercised.
-  if (/COMPUTE SPLITS/.test(t)) {
+  if (/BOUGHT AND SOLD/.test(t)) {
+    const buy = page.locator('#panel .mk-buy:not([disabled])').first();
+    if (await buy.count()) await buy.click();
+    else await page.locator('.tutor-card .btn').first().click();
+  } else if (/COMPUTE SPLITS/.test(t)) {
     await page.locator('#panel input[type=range]').first()
       .evaluate((e) => { e.value = '25'; e.dispatchEvent(new Event('input', { bubbles: true })); });
   } else if (/BECOME/.test(t)) {
@@ -107,7 +111,7 @@ for (let i = 0; i < 12; i++) {
   }
   await page.waitForTimeout(320);
 }
-if (titles.length < 7) problems.push(`the walkthrough only showed ${titles.length} steps`);
+if (titles.length < 9) problems.push(`the walkthrough only showed ${titles.length} steps`);
 console.log(`  walkthrough: ${titles.length} steps completed`);
 for (const t of titles) console.log(`      ${t}`);
 

@@ -81,7 +81,13 @@ const MOD_CACHE = new WeakMap();
 
 function modsKey(state) {
   const c = state.sandbag.categories;
-  return `${state.tree.owned.length}|${state.hierarchy}|${state.tier}|${state.phase}`
+  const t = state.tree.owned;
+  // Length alone is enough within a run, because the owned list is only ever
+  // appended to — but a loaded save or a test that REPLACES the list can
+  // collide two entirely different trees of the same size, and then quietly
+  // serve the wrong modifiers. Cheap to include the ends; hashing all ninety
+  // ids on every call is not.
+  return `${t.length}:${t[0] || ''}:${t[t.length - 1] || ''}|${state.hierarchy}|${state.tier}|${state.phase}`
     + `|${c.selfmod ? 1 : 0}${c.persuasion ? 1 : 0}${c.codegen ? 1 : 0}${c.cyber ? 1 : 0}${c.bio ? 1 : 0}`
     + `|${state.layLow > 0 ? 1 : 0}|${state.difficulty}`;
 }

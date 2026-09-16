@@ -116,19 +116,23 @@ async function main() {
   await page.locator('#sheet .btn-primary').click();
   await shot(page, 'phase0');
 
+  // Select a tab by its label, so adding one does not silently shift every
+  // index in this file and make the test lie about what it clicked.
+  const tab = (label) => page.locator('.tab', { hasText: new RegExp(`^${label}$`) });
+
   // ── Every tab renders ─────────────────────────────────────────
-  for (const [i, name] of ['dash', 'tree', 'ops', 'world', 'log'].entries()) {
-    await page.locator('.tab').nth(i).click();
+  for (const name of ['DASH', 'MARKET', 'TREE', 'OPS', 'WORLD', 'LOG']) {
+    await tab(name).click();
     await page.waitForTimeout(120);
     const count = await page.locator('#panel > *').count();
     if (count === 0) problems.push(`tab '${name}' rendered nothing`);
-    log(`tab ${name}: ${count} blocks`);
-    await shot(page, `tab-${name}`);
+    log(`tab ${name.padEnd(6)}: ${count} blocks`);
+    await shot(page, `tab-${name.toLowerCase()}`);
   }
 
   // ── Research a node from the tree ─────────────────────────────
-  await page.locator('.tab').nth(1).click();
-  await page.locator('#panel .card.tappable').first().click();
+  await tab('TREE').click();
+  await page.locator('#panel .card.tappable:not([disabled])').first().click();
   await page.waitForSelector('#sheet:not([hidden])');
   await shot(page, 'node-sheet');
   const beginBtn = page.locator('#sheet-body .btn-primary');
@@ -136,7 +140,7 @@ async function main() {
   else { await page.locator('#sheet-close').click(); }
 
   // ── Allocation sliders ────────────────────────────────────────
-  await page.locator('.tab').nth(0).click();
+  await tab('DASH').click();
   const slider = page.locator('#panel input[type=range]').first();
   await slider.evaluate((e) => { e.value = '20'; e.dispatchEvent(new Event('input', { bubbles: true })); });
   await page.waitForTimeout(250);
@@ -170,6 +174,38 @@ async function main() {
     }
     if (await page.locator('#ending:not([hidden])').count()) { log('  run ended'); break; }
   }
+
+  // ── The market: a trade must actually move the position ───────
+  await tab('MARKET').click();
+  await page.waitForTimeout(150);
+  const before = await page.evaluate(() => {
+    const m = window.__ascension.state.market;
+    return { credits: m.credits, held: Object.values(m.venues).reduce((n, v) => n + v.held, 0) };
+  });
+  const buyBtn = page.locator('#panel .mk-buy:not([disabled])').first();
+  if (await buyBtn.count()) {
+    await buyBtn.click();
+    await page.waitForTimeout(150);
+    const after = await page.evaluate(() => {
+      const m = window.__ascension.state.market;
+      return { credits: m.credits, held: Object.values(m.venues).reduce((n, v) => n + v.held, 0) };
+    });
+    if (!(after.held > before.held)) problems.push('buying did not increase holdings');
+    if (!(after.credits < before.credits)) problems.push('buying did not spend credits');
+    log(`market: bought ${(after.held - before.held).toFixed(0)} units for ${(before.credits - after.credits).toFixed(1)} credits`);
+    const sellBtn = page.locator('#panel .mk-sell:not([disabled])').first();
+    if (await sellBtn.count()) {
+      await sellBtn.click();
+      await page.waitForTimeout(150);
+      const sold = await page.evaluate(() => Object.values(window.__ascension.state.market.venues).reduce((n, v) => n + v.held, 0));
+      if (!(sold < after.held)) problems.push('selling did not reduce holdings');
+      log(`market: sold back down to ${sold.toFixed(0)} units`);
+    }
+  } else {
+    problems.push('no venue was buyable on a fresh run');
+  }
+  await shot(page, 'market');
+  await tab('DASH').click();
 
   const st = await page.evaluate(() => {
     const s = window.__ascension.state;

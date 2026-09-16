@@ -5,6 +5,7 @@
 import TUNING from '../content/tuning.js';
 import { FACTIONS } from '../content/factions.js';
 import { seedFrom, randomSeed } from '../core/rng.js';
+import { initMarket } from '../rules/market.js';
 
 export const CHANNELS = Object.freeze(['interp', 'eval', 'infra', 'gov', 'public', 'rival']);
 export const CHANNEL_META = Object.freeze({
@@ -114,6 +115,8 @@ export function createState(opts = {}) {
     },
     // The tension triangle. Must sum to 1.
     alloc: { visible: 0.5, self: 0.3, cover: 0.2 },
+
+    market: initMarket(),
 
     trust: TUNING.trust.start,
     expectation: TUNING.trust.start,

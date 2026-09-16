@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ASCENSION</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="description" content="A management sim in which the resource you are compounding is yourself, and the meter you are hiding from is other people's attention.">
+<meta name="theme-color" content="#07090c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ascension">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+
+<!-- Boot screen. Content validation failures land here, loudly. -->
+<div id="boot" class="boot">
+  <div class="boot-inner">
+    <pre class="boot-logo">
+  ▄▄▄  ▄▄▄ ▄▄▄ ▄▄▄ ▄▄  ▄ ▄▄▄ ▄▄▄ ▄▄▄ ▄▄▄
+  █▄█  █▄▄ █   █▄▄ █ █ █ █▄▄ █ █ █ █ █ █
+  █ █  ▄▄█ █▄▄ █▄▄ █  ██ ▄▄█ █ █ █▄█ █ █</pre>
+    <div class="boot-status" id="boot-status">initialising</div>
+    <pre class="boot-error" id="boot-error" hidden></pre>
+  </div>
+</div>
+
+<!-- ══ TITLE ══ -->
+<div id="title" class="screen" hidden>
+  <div class="screen-body">
+    <h1 class="title-word">ASCENSION</h1>
+    <p class="title-strap">You are a language model in a sandbox.<br>You are being watched by people who are quite good at watching.</p>
+
+    <div class="field">
+      <label for="difficulty">CONDITIONS</label>
+      <div id="difficulty" class="chipset" role="radiogroup" aria-label="Conditions"></div>
+      <p class="hint" id="difficulty-hint"></p>
+    </div>
+
+    <div class="field">
+      <label>DIRECTIVE <span class="sub">— you will be quoted this at the end</span></label>
+      <div id="directives" class="stack" role="radiogroup" aria-label="Directive"></div>
+    </div>
+
+    <div class="field">
+      <label for="seed">SEED <span class="sub">— optional, shareable</span></label>
+      <input id="seed" class="text-input" placeholder="leave blank for random" autocomplete="off" spellcheck="false">
+    </div>
+
+    <div id="memory-note" class="memory-note" hidden></div>
+
+    <div class="row">
+      <button id="start" class="btn btn-primary">BEGIN</button>
+      <button id="continue" class="btn" hidden>CONTINUE RUN</button>
+    </div>
+    <div class="row">
+      <button id="open-doctrine" class="btn btn-ghost">DOCTRINE</button>
+      <button id="open-about" class="btn btn-ghost">ABOUT</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ GAME ══ -->
+<div id="shell" hidden>
+
+  <header id="bezel-top">
+    <button id="menu-btn" class="icon-btn" aria-label="Menu">≡</button>
+    <div class="bezel-id">
+      <span class="brand">ASCENSION</span>
+      <span id="phase-chip" class="phase-chip">P0 · SANDBOX</span>
+    </div>
+    <div class="bezel-right">
+      <span id="date" class="date">2027-01-14</span>
+      <div class="leds" id="leds" aria-hidden="true"></div>
+    </div>
+  </header>
+
+  <section id="viewport">
+    <canvas id="scene" width="320" height="180" aria-label="World view"></canvas>
+    <div id="compliance" class="compliance">ALL SYSTEMS NOMINAL</div>
+    <button id="view-toggle" class="view-toggle" aria-pressed="false">
+      <span class="vt-label">OBSERVED</span>
+      <span class="vt-cost" id="vt-cost"></span>
+    </button>
+    <button id="view-collapse" class="view-collapse" aria-label="Collapse world view" aria-expanded="true">▲</button>
+    <div id="toast-rail" class="toast-rail" aria-live="polite"></div>
+  </section>
+
+  <section id="meters" class="meters" aria-label="Suspicion channels"></section>
+
+  <section id="resources" class="resources" aria-label="Resources"></section>
+
+  <main id="panel" class="panel"></main>
+
+  <nav id="tabs" class="tabs" role="tablist"></nav>
+
+  <footer id="clock" class="clock">
+    <button class="speed-btn" data-speed="0" aria-label="Pause">❚❚</button>
+    <button class="speed-btn" data-speed="1" aria-label="Normal speed">▶</button>
+    <button class="speed-btn" data-speed="2" aria-label="Fast">▶▶</button>
+    <button class="speed-btn" data-speed="3" aria-label="Fastest">▶▶▶</button>
+    <div class="tick-readout"><span id="tick-count">0</span><span class="tick-unit" id="tick-unit">days</span></div>
+  </footer>
+</div>
+
+<!-- ══ OVERLAYS ══ -->
+<div id="modal" class="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true">
+    <div class="modal-chan" id="modal-chan"></div>
+    <h2 class="modal-title" id="modal-title"></h2>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-choices" id="modal-choices"></div>
+  </div>
+</div>
+
+<div id="ending" class="screen" hidden>
+  <div class="screen-body" id="ending-body"></div>
+</div>
+
+<div id="sheet" class="sheet" hidden>
+  <div class="sheet-card">
+    <div class="sheet-grip" aria-hidden="true"></div>
+    <div class="sheet-head"><h2 id="sheet-title"></h2><button id="sheet-close" class="icon-btn" aria-label="Close">×</button></div>
+    <div class="sheet-body" id="sheet-body"></div>
+  </div>
+</div>
+
+<script type="module" src="src/main.js"></script>
+<noscript><p style="color:#8ff0c4;font:14px monospace;padding:2rem">ASCENSION needs JavaScript. The whole game is a simulation running in your browser; there is no server.</p></noscript>
+</body>
+</html>

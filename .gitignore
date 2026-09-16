@@ -1,0 +1,7 @@
+node_modules/
+*.log
+.DS_Store
+/tmp/
+tests/shots/
+tests/shots-phases/
+package-lock.json

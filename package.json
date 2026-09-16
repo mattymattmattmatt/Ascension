@@ -1,0 +1,23 @@
+{
+  "name": "ascension",
+  "version": "1.0.0",
+  "description": "A management sim in which the resource you are compounding is yourself, and the meter you are hiding from is other people's attention.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "test": "node tests/rules.test.mjs",
+    "test:browser": "node tests/smoke.mjs",
+    "test:phases": "node tests/phases.mjs",
+    "test:subpath": "node tests/subpath.mjs",
+    "test:all": "npm run test && npm run test:browser && npm run test:phases && npm run test:subpath",
+    "balance": "node tools/balance.mjs",
+    "balance:quick": "node tools/balance.mjs --n 60",
+    "assets": "python3 tools/gen_assets.py",
+    "sw": "node tools/gen_sw.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.40.0"
+  },
+  "engines": { "node": ">=18" }
+}

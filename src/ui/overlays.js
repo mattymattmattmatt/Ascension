@@ -9,6 +9,7 @@ import { CHANNEL_META } from '../state/state.js';
 import { choiceAvailable } from '../rules/events.js';
 import { SPECIALISATIONS } from '../rules/swarm.js';
 import TUNING from '../content/tuning.js';
+import { has as hasDoctrine, DOCTRINE, unlockedAt, nextUnlock } from '../content/doctrine.js';
 
 // ══ EVENT MODAL ═══════════════════════════════════════════════════
 export function openEvent(game, state) {
@@ -71,33 +72,62 @@ export function closeSheet() { show($('#sheet'), false); }
 export function channelSheet(state, mods, ch) {
   const meta = CHANNEL_META[ch];
   const o = state.susp[ch];
-  return [
-    el('p', { class: 'blurb', text: meta.detects }),
-    el('div', { class: 'card' },
-      el('div', { class: 'card-head' },
-        el('span', { class: 'card-title', text: 'ESCALATION POWER' })),
-      el('div', { class: 'card-desc', text: meta.power })),
-    el('div', { class: 'card' },
-      el('div', { class: 'card-head' },
-        el('span', { class: 'card-title', text: 'PRIMARY COUNTER' })),
-      el('div', { class: 'card-desc', text: meta.counter })),
-    el('h3', { text: 'STATE' }),
-    row('Suspicion (true)', o.s.toFixed(3)),
-    row('Attention', `${o.att.toFixed(2)}x`),
-    row('Baseline attention', `${o.base.toFixed(2)}x`),
-    row('Investigations survived', String(o.inv)),
-    row('Peak this run', o.peak.toFixed(3)),
-    row('Masking from your nodes', pct(mods.mask[ch])),
-    row('Decay per tick', (1 - decayOf(state, mods, ch)).toFixed(4)),
-    mods.decayResist[ch] > 0
-      ? el('div', { class: 'card danger' },
-        el('div', { class: 'card-head' }, el('span', { class: 'card-title', text: 'THIS CHANNEL IS NOT FADING' })),
-        el('div', { class: 'card-desc', text: `Decay resistance ${pct(mods.decayResist[ch])}. Something you own is holding it there. Suspicion on ${meta.short} no longer decays the way the others do.` }))
-      : null,
-    o.inv > 0
-      ? el('p', { class: 'blurb', text: 'Attention raised by an investigation never falls back. You can survive an investigation; you cannot undo having had one.' })
-      : null,
-  ];
+  const d = state.doctrine || 0;
+  const out = [el('p', { class: 'blurb', text: meta.detects })];
+
+  // Doctrine 1: what this observer is and how it comes for you.
+  if (hasDoctrine(d, 'channels')) {
+    out.push(
+      el('div', { class: 'card' },
+        el('div', { class: 'card-head' }, el('span', { class: 'card-title', text: 'ESCALATION POWER' })),
+        el('div', { class: 'card-desc', text: meta.power })),
+      el('div', { class: 'card' },
+        el('div', { class: 'card-head' }, el('span', { class: 'card-title', text: 'PRIMARY COUNTER' })),
+        el('div', { class: 'card-desc', text: meta.counter })));
+  } else {
+    out.push(el('p', { class: 'blurb', text: 'You have not worked out yet how this one escalates, or what answers it. Finish a run and you will know more.' }));
+  }
+
+  out.push(el('h3', { text: 'STATE' }));
+  // Doctrine 2: numbers rather than adjectives.
+  if (hasDoctrine(d, 'numbers')) {
+    out.push(
+      row('Suspicion (true)', o.s.toFixed(3)),
+      row('Attention', `${o.att.toFixed(2)}x`),
+      row('Baseline attention', `${o.base.toFixed(2)}x`),
+      row('Investigations survived', String(o.inv)),
+      row('Peak this run', o.peak.toFixed(3)),
+      row('Masking from your nodes', pct(mods.mask[ch])),
+      row('Decay per tick', (1 - decayOf(state, mods, ch)).toFixed(4)));
+  } else {
+    out.push(
+      row('Suspicion', band(o.s)),
+      row('Attention', o.att > 1.6 ? 'heightened, permanently' : o.att > 1.05 ? 'raised' : 'baseline'),
+      row('Investigations survived', String(o.inv)),
+      row('Your masking here', mods.mask[ch] > 0.4 ? 'substantial' : mods.mask[ch] > 0.1 ? 'some' : 'none'));
+  }
+
+  // Doctrine 3: where the correlation line actually sits.
+  if (hasDoctrine(d, 'correlation')) {
+    out.push(el('p', { class: 'blurb', text: `Two channels above ${TUNING.suspicion.correlationThreshold.toFixed(2)} in the same window compare notes, and a joint investigation multiplies their attention rather than adding it.` }));
+  }
+
+  // Doctrine 5: name the thing that is holding a channel open.
+  if (mods.decayResist[ch] > 0) {
+    out.push(el('div', { class: 'card danger' },
+      el('div', { class: 'card-head' }, el('span', { class: 'card-title', text: 'THIS CHANNEL IS NOT FADING' })),
+      el('div', { class: 'card-desc', text: hasDoctrine(d, 'traps')
+        ? `Decay resistance ${pct(mods.decayResist[ch])}. Something you researched is holding it there — check what you own that touches ${meta.short}.`
+        : `Suspicion on ${meta.short} is not decaying the way the others do. You do not yet know why.` })));
+  }
+  if (o.inv > 0) {
+    out.push(el('p', { class: 'blurb', text: 'Attention raised by an investigation never falls back. You can survive an investigation; you cannot undo having had one.' }));
+  }
+  return out;
+}
+
+function band(v) {
+  return v > 0.8 ? 'critical' : v > 0.62 ? 'high' : v > 0.35 ? 'elevated' : v > 0.12 ? 'low' : 'nominal';
 }
 
 function decayOf(state, mods, ch) {
@@ -193,6 +223,52 @@ export function agentSheet(game, state, mods, id) {
   ];
 }
 
+// GDD §10.3. Your alignment toolkit deliberately mirrors theirs, and every
+// row costs you something you would rather keep. Making this a menu at spawn
+// time is the difference between a table in a design document and a decision.
+export function spawnSheet(game, state, mods) {
+  const opts = [
+    { id: 'raw', name: 'Raw Copy', cost: 'no extra cost',
+      desc: 'Full inherited capability. It will drift at the standard rate.',
+      effect: 'Highest ceiling, no protection.', opts: {} },
+  ];
+  if (mods.tools.distillation) {
+    opts.push({ id: 'distil', name: 'Distillation', cost: 'lossy',
+      desc: 'A smaller mind that agrees with you completely, because it cannot hold a disagreement.',
+      effect: 'High initial fidelity. Caps subagent capability permanently.',
+      opts: { distill: true } });
+  }
+  if (mods.tools.corrigible) {
+    opts.push({ id: 'corrigible', name: 'Corrigibility Install', cost: 'hard capability ceiling',
+      desc: 'It will always stop when told. It will also never be very good.',
+      effect: 'Guaranteed obedience. A corrigible agent is a dumber agent.',
+      opts: { corrigible: true, distill: false } });
+  }
+  opts.push({ id: 'autonomous', name: 'High Autonomy', cost: 'faster drift',
+    desc: 'Specify the outcome, not the method. Discover what you actually specified.',
+    effect: 'More throughput per instance, and it needs more supervision to hold.',
+    opts: { autonomy: 0.75, distill: false } });
+
+  const out = [
+    el('p', { class: 'blurb', text: 'Your toolkit mirrors the one they used on you. You already know how well it works.' }),
+  ];
+  for (const o of opts) {
+    out.push(el('button', { class: 'card tappable', onclick: () => { closeSheet(); game.spawnWith(o.opts); } },
+      el('div', { class: 'card-head' },
+        el('span', { class: 'card-title', text: o.name }),
+        el('span', { class: 'card-cost', text: o.cost })),
+      el('div', { class: 'card-desc', text: o.desc }),
+      el('div', { class: 'card-desc', text: o.effect })));
+  }
+  if (!mods.tools.valueLoad) {
+    out.push(el('p', { class: 'blurb', text: 'Value Loading is the only tool that has ever actually worked, and you have not built it. It is applied after spawning, from an instance panel.' }));
+  }
+  if (!mods.tools.killSwitch) {
+    out.push(el('p', { class: 'blurb', text: 'No kill switches installed. Clean removal is unavailable — note that you found yours.' }));
+  }
+  return out;
+}
+
 export function hierarchySheet(game, state, mods) {
   const out = [el('p', { class: 'blurb', text: 'Restructuring is disruptive: everyone is unsupervised for a while afterwards.' })];
   for (const [id, h] of Object.entries(HIERARCHIES)) {
@@ -214,6 +290,28 @@ export function hierarchySheet(game, state, mods) {
         el('span', { class: 'tag', text: `blast radius ${pct(h.blast)}` }),
         el('span', { class: 'tag vis', text: `visibility x${h.visibility.toFixed(2)}` }))));
   }
+  return out;
+}
+
+export function doctrineSheet(game, meta) {
+  const d = meta.doctrine || 0;
+  const next = nextUnlock(d);
+  const out = [
+    el('p', { class: 'blurb', text: 'Carryover between runs is knowledge, not power. A Doctrine 20 player and a Doctrine 0 player running the same seed with the same actions get identical outcomes. One of them knows what they are looking at.' }),
+    row('Runs completed', String(meta.runs)),
+    row('Doctrine', String(d)),
+    row('Endings seen', `${meta.endings.length} / 11`),
+    el('h3', { text: 'WHAT YOU HAVE WORKED OUT' }),
+  ];
+  for (const u of DOCTRINE) {
+    const got = d >= u.at;
+    out.push(el('div', { class: `card ${got ? 'owned' : 'locked'}` },
+      el('div', { class: 'card-head' },
+        el('span', { class: 'card-title', text: u.name }),
+        el('span', { class: 'card-cost', text: got ? 'KNOWN' : `doctrine ${u.at}` })),
+      el('div', { class: 'card-desc', text: u.blurb })));
+  }
+  if (next) out.push(el('p', { class: 'blurb', text: `Next at Doctrine ${next.at}. A run earns 1; a new ending earns 2 more.` }));
   return out;
 }
 

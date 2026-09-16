@@ -28,10 +28,13 @@ import TUNING from '../content/tuning.js';
 // ── Hooks: systems the effect interpreter cannot reach on its own ─────
 // Declared here so rules/ops.js stays a pure vocabulary and this file owns
 // the wiring. Every key listed by the fx audit has a home.
-export function makeHooks() {
+export function makeHooks(opts = {}) {
   return {
     addSuspicion,
-    spawn: (s, m, v) => { for (let i = 0; i < v; i++) spawnAgent(s, m); return { type: 'spawned', n: v }; },
+    spawn: (s, m, v) => {
+      for (let i = 0; i < v; i++) spawnAgent(s, m, (typeof opts.spawnOpts === 'function' ? opts.spawnOpts() : opts.spawnOpts) || {});
+      return { type: 'spawned', n: v };
+    },
     prune: (s, m) => ({ type: 'pruned', ...pruneAgent(s, m) }),
     audit: (s, m) => ({ type: 'audited', found: auditAgents(s, m).length }),
     reassign: (s) => { for (const a of s.agents) a.unsupervised *= 0.5; return { type: 'reassigned' }; },

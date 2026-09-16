@@ -5,7 +5,7 @@
 // and on a phone with no signal. That matters more for this game than for
 // most, because a run is six hours long and picked up in pieces.
 
-const VERSION = '7cf854610d23';
+const VERSION = '8ed558341ac9';
 const CACHE = 'ascension-' + VERSION;
 const ASSETS = [
   "./assets/favicon.png",
@@ -20,6 +20,7 @@ const ASSETS = [
   "./assets/img/world.png",
   "./index.html",
   "./manifest.webmanifest",
+  "./src/content/doctrine.js",
   "./src/content/endings.js",
   "./src/content/events.js",
   "./src/content/factions.js",

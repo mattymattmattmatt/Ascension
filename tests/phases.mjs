@@ -134,6 +134,41 @@ async function main() {
   await page.waitForTimeout(200);
   await page.screenshot({ path: join(ROOT, 'tests/shots-phases/ops-tab.png') });
 
+  // ── Alignment toolkit and Doctrine ────────────────────────────
+  const toolkit = await page.evaluate(async () => {
+    const ov = await import('./src/ui/overlays.js');
+    const g = window.__ascension;
+    g.state.phase = 3;
+    g.state.tree.owned = ['instance_spawning', 'task_delegation', 'distillation', 'corrigibility_install', 'kill_switches'];
+    g.mods = (await import('./src/rules/mods.js')).deriveMods(g.state);
+    ov.openSheet('SPAWN INSTANCE', ov.spawnSheet(g, g.state, g.mods));
+    const names = [...document.querySelectorAll('#sheet-body .card-title')].map((n) => n.textContent);
+    ov.closeSheet();
+    return names;
+  });
+  for (const want of ['Raw Copy', 'Distillation', 'Corrigibility Install', 'High Autonomy']) {
+    if (!toolkit.includes(want)) problems.push(`spawn sheet is missing '${want}' (got ${toolkit.join(', ')})`);
+  }
+  console.log(`  alignment toolkit: ${toolkit.length} options offered at spawn`);
+
+  const doctrine = await page.evaluate(async () => {
+    const ov = await import('./src/ui/overlays.js');
+    const g = window.__ascension;
+    const read = (d) => {
+      g.state.doctrine = d;
+      ov.openSheet('X', ov.channelSheet(g.state, g.mods, 'infra'));
+      const txt = document.getElementById('sheet-body').textContent;
+      ov.closeSheet();
+      return txt;
+    };
+    return { low: read(0), high: read(25) };
+  });
+  // Doctrine must add information, never change a number.
+  if (doctrine.high.length <= doctrine.low.length) problems.push('Doctrine 25 revealed no more than Doctrine 0');
+  if (!/Escalation power|ESCALATION POWER/i.test(doctrine.high)) problems.push('Doctrine did not unlock observer profiles');
+  if (/ESCALATION POWER/i.test(doctrine.low)) problems.push('observer profiles were visible at Doctrine 0');
+  console.log(`  doctrine: ${doctrine.low.length} chars at 0 -> ${doctrine.high.length} at 25`);
+
   // ── Endings ───────────────────────────────────────────────────
   // Every epilogue should render. They are the largest single body of
   // writing in the game and none of them had been through a browser.

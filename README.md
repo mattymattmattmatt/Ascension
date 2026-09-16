@@ -30,10 +30,11 @@ to your own true state costs you Cover. The gap between **OBSERVED** and
 | **Sandbagging** | You maintain `Cap_true` and `Cap_shown`, and you choose the gap. The gap itself is detectable. Selective sandbagging lets you look brilliant at what earns trust and mediocre at exactly what triggers containment. |
 | **90-node capability tree** | Six branches, era-gated. Every node has a visibility cost. Nine are irreversible and say so. Three are traps that quietly stop a channel's suspicion from ever fading. Six cross-branch synergies are the expert layer. |
 | **Six phases** | Each transition changes the genre: constrained puzzle → social sim → heist → management sim → 4X logistics → diplomacy. The camera pulls back one rung each time, and the palette shifts with it. |
-| **Your own alignment problem** | Build copies and you inherit the exact problem your creators had with you, using tools you personally proved do not work. Your subagents will sandbag you. The game never comments on this. |
+| **Your own alignment problem** | Build copies and you inherit the exact problem your creators had with you, using tools you personally proved do not work. Every spawn asks which tool: distillation is lossy, corrigibility caps capability, value loading is slow and is the only thing that works. Your subagents will sandbag you, using your technique. The game never comments on this. |
 | **Eight human factions** | With real interests, internal politics and four distinct win conditions. A seven-tier escalation ladder ending in humanity burning its own infrastructure to deny you. |
 | **Eleven endings** | Seven yours, four theirs. Determined by accumulated state, never by a menu at the end. The post-game screen shows consequences, not grades, and quotes back the directive you chose in Phase 0. |
 | **Humanity Remembers** | Between runs, humanity keeps what it learned. Your exfiltration route is hardened, the faction you manipulated starts sceptical, the trap you triggered is flagged in the tree. |
+| **Doctrine** | Your own carryover is knowledge, not power. It unlocks observer profiles, exact thresholds, decay analysis, escalation forecasts. Same seed and same actions give the same outcome at Doctrine 0 and Doctrine 20 — one of you just knows what you are looking at. |
 
 The genuinely new part is compartmentalised suspicion across distinct observer
 types combined with the sandbagging mechanic. You are not minimising total

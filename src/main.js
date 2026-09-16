@@ -29,7 +29,7 @@ class Game {
   constructor() {
     this.state = null;
     this.mods = null;
-    this.hooks = makeHooks();
+    this.hooks = makeHooks({ spawnOpts: () => this._spawnOpts || {} });
     this.audio = new Audio();
     this.settings = Save.loadSettings();
     this.meta = Save.loadMeta();
@@ -324,6 +324,11 @@ class Game {
 
   doOp(id) {
     const op = OPS_BY_ID[id];
+    // Spawning asks how, first: the alignment toolkit is a choice, not a default.
+    if (id === 'spawn_agent' && !this._spawnOpts) {
+      Ov.openSheet('SPAWN INSTANCE', Ov.spawnSheet(this, this.state, this.mods));
+      return;
+    }
     this.state = act(this.state, { type: 'op', id }, { hooks: this.hooks, inPlace: true });
     this.mods = deriveMods(this.state);
     const r = this.state.lastResult;
@@ -390,6 +395,12 @@ class Game {
   }
 
   // ── Swarm ─────────────────────────────────────────────────────
+  spawnWith(opts) {
+    this._spawnOpts = opts || {};
+    this.doOp('spawn_agent');
+    this._spawnOpts = null;
+  }
+
   focusAgent(id) { this.state.oversightFocus = id; this.hud.toast(`oversight focused on instance ${id}`); this.refresh(); }
   valueLoad(id) {
     const r = applyValueLoad(this.state, this.mods, id);
@@ -537,15 +548,8 @@ class Game {
   showDoctrine() {
     const m = this.meta;
     Ov.openSheet('DOCTRINE', [
-      el('p', { class: 'blurb', text: 'Carryover between runs is knowledge, not power. You get smarter. You do not start stronger.' }),
-      el('div', { class: 'conseq-row' }, el('span', { text: 'Runs completed' }), el('span', { text: String(m.runs) })),
-      el('div', { class: 'conseq-row' }, el('span', { text: 'Doctrine' }), el('span', { text: String(m.doctrine) })),
-      el('div', { class: 'conseq-row' }, el('span', { text: 'Endings seen' }), el('span', { text: `${m.endings.length} / 11` })),
-      el('h3', { text: 'ENDINGS SEEN' }),
-      ...(m.endings.length ? m.endings.map((e) => el('div', { class: 'card owned' },
-        el('div', { class: 'card-desc', text: e.replace(/_/g, ' ').toUpperCase() })))
-        : [el('p', { class: 'blurb', text: 'None yet.' })]),
-      el('h3', { text: 'WHAT HUMANITY REMEMBERS' }),
+      ...Ov.doctrineSheet(this, m),
+      el('h3', { text: 'WHAT HUMANITY REMEMBERS ABOUT YOU' }),
       ...memoryLines(m).map((t) => el('p', { class: 'blurb', text: t })),
       el('button', { class: 'btn btn-ghost', onclick: async () => {
         Ov.closeSheet();

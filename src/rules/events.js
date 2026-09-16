@@ -1,7 +1,7 @@
 // rules/events.js — event selection and choice application.
 
 import { EVENTS, EVENT_BY_ID } from '../content/events.js';
-import { rand, chance, pickWeighted } from '../core/rng.js';
+import { chance } from '../core/rng.js';
 import { applyFx } from './ops.js';
 
 export function eligible(state, e) {

@@ -8,7 +8,7 @@ import { $, el, fill, clear, num, pct, signed, costLine, visLine } from './dom.j
 import { NODES, BRANCHES, NODE_BY_ID, SYNERGIES, HIERARCHIES } from '../content/tree.js';
 import { OPS, CATEGORIES } from '../content/ops.js';
 import { FACTION_OPS, ESCALATION } from '../content/factions.js';
-import { CHANNELS, CHANNEL_META, PHASES } from '../state/state.js';
+import { PHASES } from '../state/state.js';
 import { isAvailable, visibleNodes, researchProgress } from '../rules/tree.js';
 import { opAvailable } from '../rules/ops.js';
 import { gateStatus } from '../rules/phases.js';

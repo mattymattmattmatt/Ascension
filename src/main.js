@@ -7,7 +7,6 @@
 import { validateContent, ContentError } from './rules/validate.js';
 import { createState, PHASES, CHANNELS, CHANNEL_META } from './state/state.js';
 import { tick, act, deriveMods, makeHooks } from './rules/index.js';
-import { startResearch } from './rules/tree.js';
 import { prepBreakdown, stageChance, STAGES } from './rules/exfil.js';
 import { applyValueLoad } from './rules/swarm.js';
 import { finish, directiveLine } from './rules/endings.js';
@@ -22,7 +21,7 @@ import { Scene } from './render/scene.js';
 import { Hud } from './ui/hud.js';
 import { Panels } from './ui/panels.js';
 import * as Ov from './ui/overlays.js';
-import { $, el, fill, show, num, pct, signed } from './ui/dom.js';
+import { $, el, fill, show, pct, signed } from './ui/dom.js';
 import { Audio } from './core/audio.js';
 import * as Save from './state/save.js';
 

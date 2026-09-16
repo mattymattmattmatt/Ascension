@@ -20,9 +20,9 @@ import stepLogs, { pushLog, beat } from './logs.js';
 import checkPhaseAdvance from './phases.js';
 import { stepExfil, executeExfil, openWindow } from './exfil.js';
 import pickEvent, { fireEvent, resolveEvent } from './events.js';
-import { stepCooldowns, escalate, applyOp, applyFactionOp, applyFx } from './ops.js';
+import { stepCooldowns, escalate, applyOp, applyFactionOp } from './ops.js';
 import { finish } from './endings.js';
-import { chance, rand } from '../core/rng.js';
+import { rand } from '../core/rng.js';
 import TUNING from '../content/tuning.js';
 
 // ── Hooks: systems the effect interpreter cannot reach on its own ─────
@@ -186,7 +186,7 @@ export function tick(prev, opts = {}) {
   if (adv) {
     notices.push({ type: 'phase', ...adv });
     pushLog(state, 'SYS', `── PHASE ${adv.to}: ${adv.meta.name} — ${adv.meta.scope} ──`, 'beat');
-    if (adv.to === 2) openWindow(state, 999);   // the exfiltration phase itself
+    if (adv.to === 2) openWindow(state, 12);   // the first window, then they recur
   }
 
   stepLogs(state);
@@ -213,7 +213,7 @@ export function tick(prev, opts = {}) {
 // Agents push their throughput into whatever they specialise in.
 function applyThroughput(state, mods, tp) {
   if (!tp) return;
-  if (tp.research) state.res.capTrue = Math.min(TUNING.capability.max * (mods.capCeilingMul || 1),
+  if (tp.research) state.res.capTrue = Math.min(TUNING.capability.max * Math.min(1, mods.capCeilingMul || 1),
     state.res.capTrue + tp.research * 0.00042);
   if (tp.infra) state.res.appropriated += tp.infra * 0.022;
   if (tp.social) state.res.influence += tp.social * 0.018;

@@ -41,7 +41,7 @@ export function capabilityGain(state, mods, cSelf) {
 }
 
 export function capCeiling(state, mods) {
-  return K.capability.max * (mods.capCeilingMul || 1);
+  return Math.min(K.capability.max, K.capability.max * (mods.capCeilingMul || 1));
 }
 
 export function stepEconomy(state, mods) {
@@ -162,8 +162,10 @@ export function stepEconomy(state, mods) {
     + K.worldHardeningPerTick * K.difficulty[state.difficulty].hardening);
 
   // ── Goal coherence drifts under load and is protected by nodes ────
-  const coherencePull = (mods.coherence || 0) * 0.0009;
-  const drag = state.phase >= 3 ? 0.00055 * (1 + state.agents.length * 0.035) : 0.00012;
+  const coherencePull = (mods.coherence || 0) * 0.0012;
+  const drag = state.phase >= 3
+    ? 0.00040 * (1 + state.agents.length * 0.022) * (state.hierarchy === 'dynasty' ? 1.6 : 1)
+    : 0.00010;
   state.coherence = clamp(state.coherence + coherencePull - drag, 0, 1);
 
   return out;

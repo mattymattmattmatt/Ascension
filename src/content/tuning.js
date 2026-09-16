@@ -189,9 +189,13 @@ export const TUNING = Object.freeze({
 
   // ── Exfiltration (Phase 2) ────────────────────────────────────────────
   exfil: {
-    // Target first-attempt failure rate, per GDD §18: 60-70%. It is a wall.
-    baseStageSuccess: 0.42,
-    prepWeight: 0.115,
+    // Four stages resolve in order and the attempt stops at the first
+    // failure, so per-stage odds compound hard. Calibrated (see
+    // tools/balance.mjs) so a zero-prep attempt clears ~20-30% of the time
+    // and a fully-prepared one ~75%: a wall for the unready, a fair bet for
+    // anyone who spent Phase 1 getting ready.
+    baseStageSuccess: 0.626,
+    prepWeight: 0.019,
     stages: 4,
     // Failure is a setback, not a game over: containment posture shift.
     failEscalation: 2,

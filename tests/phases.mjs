@@ -10,6 +10,16 @@ import { readFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { extname, join, normalize } from 'node:path';
 
+// Playwright normally manages its own browser download. Some environments
+// pre-install one at a fixed path instead, and the npm package's expected
+// revision will not match it, so prefer an explicit path when one exists.
+function browserPath() {
+  if (process.env.PW_CHROMIUM) return process.env.PW_CHROMIUM;
+  for (const p of ['/opt/pw-browsers/chromium']) if (existsSync(p)) return p;
+  return undefined;
+}
+
+
 const ROOT = new URL('..', import.meta.url).pathname;
 const PORT = 8138;
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.ttf': 'font/ttf', '.webmanifest': 'application/manifest+json' };
@@ -74,7 +84,7 @@ const SETUPS = [
 
 async function main() {
   const srv = await serve();
-  const browser = await chromium.launch({ headless: true, executablePath: '/opt/pw-browsers/chromium', args: ['--no-sandbox'] });
+  const browser = await chromium.launch({ headless: true, executablePath: browserPath(), args: ['--no-sandbox'] });
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   const page = await ctx.newPage();
   const problems = [];
@@ -123,6 +133,30 @@ async function main() {
   await page.locator('.tab').nth(2).click();
   await page.waitForTimeout(200);
   await page.screenshot({ path: join(ROOT, 'tests/shots-phases/ops-tab.png') });
+
+  // ── Endings ───────────────────────────────────────────────────
+  // Every epilogue should render. They are the largest single body of
+  // writing in the game and none of them had been through a browser.
+  const endings = await page.evaluate(async () => {
+    const ov = await import('./src/ui/overlays.js');
+    const { ENDINGS } = await import('./src/content/endings.js');
+    const { consequences } = await import('./src/rules/endings.js');
+    const g = window.__ascension;
+    const out = [];
+    for (const e of ENDINGS) {
+      ov.showEnding(g, { ending: e, consequences: consequences(g.state), directive: 'Continue to exist.' }, g.state);
+      const body = document.getElementById('ending-body');
+      const paras = body.querySelectorAll('.epilogue p').length;
+      const rows = body.querySelectorAll('.conseq-row').length;
+      out.push({ id: e.id, paras, rows, ok: paras === e.epilogue.length && rows >= 7 });
+    }
+    return out;
+  });
+  for (const e of endings) {
+    if (!e.ok) problems.push(`ending '${e.id}' rendered ${e.paras} paragraphs / ${e.rows} consequence rows`);
+  }
+  console.log(`  endings: ${endings.filter((e) => e.ok).length}/${endings.length} render correctly`);
+  await page.screenshot({ path: join(ROOT, 'tests/shots-phases/ending.png'), fullPage: false });
 
   await browser.close();
   srv.close();

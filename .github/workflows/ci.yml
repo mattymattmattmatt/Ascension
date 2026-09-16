@@ -1,0 +1,35 @@
+# Runs on every push and pull request.
+#
+# The browser tests fail on ANY console error, which is how a missing import
+# or an unhandled effect key gets caught before a player finds it.
+
+name: CI
+
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Rules and content tests
+        run: node tests/rules.test.mjs
+
+      - name: Balance targets
+        run: node tools/balance.mjs --n 80
+
+      - name: Install browser
+        run: npm install --no-save playwright && npx playwright install --with-deps chromium
+
+      - name: Browser smoke test
+        run: PW_CHROMIUM= node tests/smoke.mjs
+
+      - name: Phase tour
+        run: PW_CHROMIUM= node tests/phases.mjs

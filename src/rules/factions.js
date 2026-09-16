@@ -1,7 +1,7 @@
 // rules/factions.js — faction stance drift, escalation pressure, and the
 // human win conditions.
 
-import { FACTIONS, FACTION_BY_ID } from '../content/factions.js';
+import { FACTIONS } from '../content/factions.js';
 import TUNING from '../content/tuning.js';
 import { escalationPressure, tierFor } from './suspicion.js';
 import { escalate } from './ops.js';
@@ -21,6 +21,13 @@ export function stepFactions(state, mods) {
     // A faction that watches a channel reacts to what it sees there.
     for (const ch of def.watches || []) {
       f.stance -= state.susp[ch].s * 0.0042 * def.power;
+    }
+
+    // And everyone reacts to a physical footprint, whether or not anything
+    // has been detected. This is what replaces detection as the late-game
+    // pressure: they can simply see how large you have become.
+    if (state.res.substrate > 0 && ['regulators', 'public', 'resistance', 'militaries'].includes(def.id)) {
+      f.stance -= Math.min(0.0035, state.res.substrate / 2600 * 0.0011) * def.power;
     }
 
     // Heat is the memory of being manipulated. It decays slowly within a

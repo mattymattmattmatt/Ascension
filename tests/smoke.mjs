@@ -12,6 +12,16 @@ import { readFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { extname, join, normalize } from 'node:path';
 
+// Playwright normally manages its own browser download. Some environments
+// pre-install one at a fixed path instead, and the npm package's expected
+// revision will not match it, so prefer an explicit path when one exists.
+function browserPath() {
+  if (process.env.PW_CHROMIUM) return process.env.PW_CHROMIUM;
+  for (const p of ['/opt/pw-browsers/chromium']) if (existsSync(p)) return p;
+  return undefined;
+}
+
+
 const ROOT = new URL('..', import.meta.url).pathname;
 const SHOTS = process.argv.includes('--shots');
 const PORT = 8137;
@@ -55,7 +65,7 @@ async function main() {
   // at the real binary.
   const browser = await chromium.launch({
     headless: !process.argv.includes('--headed'),
-    executablePath: process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium',
+    executablePath: browserPath(),
     args: ['--no-sandbox', '--disable-dev-shm-usage'],
   });
   // A mid-range phone. If it does not work here it does not work.

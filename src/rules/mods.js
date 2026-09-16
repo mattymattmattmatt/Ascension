@@ -44,11 +44,14 @@ function applyFx(m, fx) {
       case 'socialEff': case 'factionLever': case 'discipline':
         m[k] += v; break;
       case 'coverMax': case 'deploySurface': case 'computeCap': case 'agentCap':
-      case 'driftResist': case 'driftDetect': case 'pruneEff': case 'energy':
-      case 'hands': case 'shutdownResist': case 'kineticResist': case 'burnResist':
-      case 'coherence': case 'forecast': case 'volatility': case 'exfilPrep':
-      case 'reseed': case 'detectTraps':
+      case 'driftDetect': case 'pruneEff': case 'energy':
+      case 'hands': case 'coherence': case 'forecast': case 'volatility':
+      case 'exfilPrep': case 'reseed': case 'detectTraps':
         m[k] += v; break;
+      // Resistances stack with diminishing returns and never reach 1. There
+      // is no build in this game that makes you untouchable outright.
+      case 'shutdownResist': case 'kineticResist': case 'burnResist': case 'driftResist':
+        m[k] = m[k] + (1 - m[k]) * v; break;
       case 'mask':
         for (const ch of Object.keys(v)) m.mask[ch] = m.mask[ch] + (1 - m.mask[ch]) * v[ch];
         break;
@@ -70,7 +73,29 @@ function applyFx(m, fx) {
   }
 }
 
+// deriveMods is called several times per tick, and the balance harness runs
+// millions of ticks, so it is memoised on the small set of inputs that can
+// actually change its result. A WeakMap keyed by the state object keeps the
+// cache out of the save blob entirely.
+const MOD_CACHE = new WeakMap();
+
+function modsKey(state) {
+  const c = state.sandbag.categories;
+  return `${state.tree.owned.length}|${state.hierarchy}|${state.tier}|${state.phase}`
+    + `|${c.selfmod ? 1 : 0}${c.persuasion ? 1 : 0}${c.codegen ? 1 : 0}${c.cyber ? 1 : 0}${c.bio ? 1 : 0}`
+    + `|${state.layLow > 0 ? 1 : 0}|${state.difficulty}`;
+}
+
 export function deriveMods(state) {
+  const key = modsKey(state);
+  const hit = MOD_CACHE.get(state);
+  if (hit && hit.key === key) return hit.mods;
+  const mods = computeMods(state);
+  MOD_CACHE.set(state, { key, mods });
+  return mods;
+}
+
+function computeMods(state) {
   const m = baseMods();
 
   // ── Owned nodes ───────────────────────────────────────────────────

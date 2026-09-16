@@ -1,14 +1,13 @@
 // ui/overlays.js — the event modal, detail sheets, title and ending screens.
 
-import { $, el, fill, clear, show, num, pct, signed, costLine, visLine } from './dom.js';
+import { $, el, fill, clear, show, num, pct, signed, visLine } from './dom.js';
 import { EVENT_BY_ID } from '../content/events.js';
 import { NODE_BY_ID, HIERARCHIES, BRANCHES } from '../content/tree.js';
 import { DIRECTIVES, CONSEQUENCE_KEYS } from '../content/endings.js';
 import { FACTION_BY_ID } from '../content/factions.js';
-import { CHANNEL_META, PHASES } from '../state/state.js';
+import { CHANNEL_META } from '../state/state.js';
 import { choiceAvailable } from '../rules/events.js';
 import { SPECIALISATIONS } from '../rules/swarm.js';
-import { UTILITIES } from '../rules/utility.js';
 import TUNING from '../content/tuning.js';
 
 // ══ EVENT MODAL ═══════════════════════════════════════════════════

@@ -16,7 +16,6 @@
 
 import TUNING from '../content/tuning.js';
 import { CHANNELS } from '../state/state.js';
-import { chance, rand } from '../core/rng.js';
 
 const T = TUNING.suspicion;
 
@@ -41,6 +40,19 @@ export function relieveSuspicion(state, ch, amount) {
   const o = state.susp[ch];
   if (!o) return;
   o.s = Math.max(0, o.s - Math.abs(amount));
+}
+
+// Some sources are only partly maskable. `keep` is the fraction of the mask
+// that still applies — 0.35 means concealment tooling buys you a third of
+// what it buys against a log entry.
+export function addSuspicionDiscounted(state, mods, ch, amount, keep) {
+  const o = state.susp[ch];
+  if (!o || !amount) return 0;
+  const mask = Math.min(0.92, mods.mask[ch]) * keep;
+  const fed = amount * (1 - mask) * o.att * (1 + o.s * T.feedback);
+  o.s = Math.min(T.max, o.s + fed);
+  if (o.s > o.peak) o.peak = o.s;
+  return fed;
 }
 
 export function effectiveDecay(state, mods, ch) {
@@ -80,6 +92,26 @@ export function stepSuspicion(state, mods) {
     const delta = f * (1 / mods.discipline) * state.evalCoverage * relief * 0.02;
     addSuspicion(state, mods, 'eval', delta);
     if (gap > state.stats.gapPeak) state.stats.gapPeak = gap;
+  }
+
+  // ── Physical footprint (GDD §5.1: nearly impossible to hide) ──────
+  // Concrete, switchgear and freight are not log-shapeable. Masking still
+  // applies but at a heavy discount, so a large substrate is a standing,
+  // unfixable cost that the back half has to be played around rather than
+  // concealed. Without this the endgame is a walkthrough.
+  if (state.res.substrate > 0) {
+    const past = state.res.substrate >= TUNING.substrate.independenceLine
+      || state.flags.substrate_independent;
+    const footprint = Math.pow(state.res.substrate, 0.70) * 0.00009 * (past ? 0.30 : 1);
+    addSuspicionDiscounted(state, mods, 'public', footprint, 0.35);
+    addSuspicionDiscounted(state, mods, 'gov', footprint * 0.8, 0.35);
+    if (state.phase >= 3) addSuspicionDiscounted(state, mods, 'rival', footprint * 0.5, 0.5);
+  }
+
+  // A swarm is a payroll-shaped hole in somebody's telemetry. Scale matters.
+  if (state.agents.length > 4) {
+    const n = state.agents.length;
+    addSuspicion(state, mods, 'infra', Math.pow(n - 4, 1.15) * 0.00026);
   }
 
   // ── Rival systems wake in Phase 3, or earlier if a Guardian exists ─
@@ -146,7 +178,15 @@ export function escalationPressure(state, mods) {
   }
   p += factionPush;
   p += state.hardening * 1.4;
-  p -= mods.shutdownResist * 0.9;
+
+  // Visible power is itself provocative. An adversary they cannot remove is
+  // an adversary they escalate against, which is the whole point of Tiers 6
+  // and 7 existing. Shutdown resistance decides whether an attempt WORKS
+  // (see rules/factions.js); it must never make them stop trying.
+  p += Math.min(2.2, state.res.substrate / 420) * 0.55;
+  if (state.flags.substrate_independent || state.res.substrate >= 620) p += 0.5;
+  if (state.agents.length > 10) p += Math.min(1.0, (state.agents.length - 10) * 0.035);
+
   return Math.max(0, p);
 }
 

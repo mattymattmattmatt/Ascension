@@ -110,14 +110,26 @@ export function consequences(state) {
   };
 }
 
+// No specific ending matched. That is not a bug — it is the ordinary case
+// of a run that ends without resolving, and the honest reading of it is a
+// stalemate: too strong to remove, too watched to expand.
+function fallbackEnding(state, trigger) {
+  if (trigger === 'shutdown') {
+    return state.world.surveillance > 0.55 ? ENDING_BY_ID.pyrrhic_containment : ENDING_BY_ID.clean_shutdown;
+  }
+  if (crossedIndependence(state)) {
+    return state.halted ? ENDING_BY_ID.the_long_quiet : ENDING_BY_ID.the_gardener;
+  }
+  return ENDING_BY_ID.negotiated_treaty;
+}
+
 export function directiveLine(state) {
   return DIRECTIVES.find((d) => d.id === state.directive)?.line || DIRECTIVES[0].line;
 }
 
 export function finish(state, mods, trigger = null) {
   const r = evaluateEnding(state, mods, trigger);
-  const fallback = trigger === 'shutdown' ? ENDING_BY_ID.clean_shutdown : ENDING_BY_ID.the_treaty;
-  const ending = r?.ending || fallback;
+  const ending = r?.ending || fallbackEnding(state, trigger);
   state.ending = ending.id;
   state.over = true;
   state.paused = true;

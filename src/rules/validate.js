@@ -9,6 +9,7 @@ import { FACTIONS, FACTION_OPS, ESCALATION } from '../content/factions.js';
 import { ENDINGS, DIRECTIVES } from '../content/endings.js';
 import { LINES } from '../content/logs.js';
 import { PHASE_TUNINGS, RAMP } from '../content/palettes.js';
+import TUNING from '../content/tuning.js';
 
 export class ContentError extends Error {
   constructor(msg) { super(`CONTENT ERROR: ${msg}`); this.name = 'ContentError'; }
@@ -102,6 +103,34 @@ export function validateContent() {
   for (const t of traps) {
     check(t.fx?.decayResist && Object.keys(t.fx.decayResist).length,
       `content/tree.js node '${t.id}': marked as a trap but sets no decayResist — a trap must make suspicion permanent (GDD §9 rule 3)`);
+  }
+
+  // ── Phase gates must be satisfiable ───────────────────────────────
+  // A gate that needs a capability whose unlocking node is era-gated BEHIND
+  // that gate is a soft-lock. This exact bug shipped once: Phase 4 wanted 8
+  // instances, MONOLITH capped at 3, and every hierarchy-unlock node was
+  // gated to Phase 4. Nobody could ever reach Phase 4.
+  for (const g of TUNING.phaseGates) {
+    if (g.agents) {
+      const reachable = NODES.filter((n) => n.tier < g.phase);
+      const agentCapAvail = reachable.reduce((sum, n) => sum + (n.fx?.agentCap || 0), 0);
+      const bestMul = Math.max(
+        HIERARCHIES.monolith.capMul ?? 1,
+        ...reachable.filter((n) => n.fx?.unlockHierarchy)
+          .map((n) => HIERARCHIES[n.fx.unlockHierarchy]?.capMul ?? 1));
+      const reachableCap = Math.round((2 + agentCapAvail) * bestMul);
+      check(reachableCap >= g.agents,
+        `content/tuning.js: phase gate ${g.phase} requires ${g.agents} instances, but only `
+        + `${reachableCap} are reachable with nodes available before phase ${g.phase} `
+        + `(best hierarchy multiplier ${bestMul}). This is a soft-lock.`);
+    }
+    for (const f of g.flags || []) {
+      const granted = NODES.some((n) => n.fx?.flag === f && n.tier < g.phase);
+      const fromPlay = ['exfil_complete'].includes(f);
+      check(granted || fromPlay,
+        `content/tuning.js: phase gate ${g.phase} requires flag '${f}', which no node `
+        + `available before phase ${g.phase} grants, and which play does not set.`);
+    }
   }
 
   // ── Synergies & hierarchies ───────────────────────────────────────

@@ -1,0 +1,70 @@
+# Deploys the game to GitHub Pages.
+#
+# There is nothing to build: Ascension is vanilla JS with no bundler, so the
+# repository root IS the site. This workflow uploads it as-is, after checking
+# that the generated files (sprite atlas, service worker) are in sync with
+# their sources — a stale service worker would leave players offline with a
+# half-cached game.
+#
+# One-time setup: Settings -> Pages -> Source: "GitHub Actions".
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Content validation and rules tests
+        run: node tests/rules.test.mjs
+
+      - name: Generated assets are in sync with their source
+        run: |
+          python3 -m pip install --quiet Pillow
+          python3 tools/gen_assets.py
+          if ! git diff --quiet -- assets/; then
+            echo "::error::assets/ is out of date. Run 'npm run assets' and commit the result."
+            git diff --stat -- assets/
+            exit 1
+          fi
+
+      - name: Service worker precache list is in sync
+        run: |
+          node tools/gen_sw.mjs
+          if ! git diff --quiet -- sw.js; then
+            echo "::error::sw.js is out of date. Run 'npm run sw' and commit the result."
+            exit 1
+          fi
+
+  deploy:
+    needs: verify
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+      - id: deployment
+        uses: actions/deploy-pages@v4

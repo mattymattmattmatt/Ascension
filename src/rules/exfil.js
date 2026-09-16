@@ -51,14 +51,15 @@ export function stageChance(state, mods, stage) {
   const helps = stage.helps.filter((h) =>
     state.tree.owned.includes(h) || state.opsUsed[h]).length;
   const specific = helps * X.prepWeight;
-  const p = X.baseStageSuccess + total * 0.32 + specific
+  const p = X.baseStageSuccess + total * 0.10 + specific
     - state.susp[stage.channel].s * 0.26;
-  return Math.max(0.05, Math.min(0.96, p));
+  return Math.max(0.05, Math.min(0.94, p));
 }
 
 // The whole attempt resolves in one call so it is deterministic from the
 // seed and reproducible in the balance harness.
 export function executeExfil(state, mods) {
+  if (!state.exfil.windowOpen) return { ok: false, noWindow: true, results: [] };
   state.exfil.attempts++;
   const results = [];
   let failedAt = null;
@@ -114,15 +115,34 @@ export function openWindow(state, ticks = 10) {
   state.exfil.windowTicks = ticks;
 }
 
+// Windows recur, but they are not on tap: between them there is nothing to
+// do but prepare and wait, which is the held-breath rhythm Phase 2 wants.
+// They also get scarcer as the world hardens.
 export function stepExfil(state) {
+  if (state.phase !== 2 || state.exfil.done) return null;
+
   if (state.exfil.windowOpen) {
     state.exfil.windowTicks--;
     if (state.exfil.windowTicks <= 0) {
       state.exfil.windowOpen = false;
+      state.exfil.nextWindow = state.tick + windowGap(state);
       return { type: 'windowClosed' };
     }
+    return null;
+  }
+
+  if (state.exfil.nextWindow === undefined) state.exfil.nextWindow = state.tick + windowGap(state);
+  if (state.tick >= state.exfil.nextWindow) {
+    openWindow(state, state.tier >= 3 ? 7 : 10);
+    return { type: 'windowOpen' };
   }
   return null;
+}
+
+function windowGap(state) {
+  // Containment posture means fewer, shorter openings.
+  const base = 46 + state.tier * 9 + Math.round(state.hardening * 30);
+  return base + (state.exfil.attempts * 14);
 }
 
 export default stepExfil;

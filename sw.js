@@ -5,7 +5,7 @@
 // and on a phone with no signal. That matters more for this game than for
 // most, because a run is six hours long and picked up in pieces.
 
-const VERSION = '2c27594ba069';
+const VERSION = '7cf854610d23';
 const CACHE = 'ascension-' + VERSION;
 const ASSETS = [
   "./assets/favicon.png",

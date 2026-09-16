@@ -91,6 +91,11 @@ async function main() {
   page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
   page.on('console', (m) => { if (m.type() === 'error') problems.push(`console.error: ${m.text()}`); });
 
+  await page.addInitScript(() => {
+    try {
+      localStorage.setItem('ascension.settings.v1', JSON.stringify({ audio: false, tutorDone: true }));
+    } catch { /* private mode */ }
+  });
   await page.goto(`http://localhost:${PORT}/`, { waitUntil: 'networkidle' });
   await page.waitForSelector('#title:not([hidden])');
   await page.locator('#seed').fill('phase-tour');

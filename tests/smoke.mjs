@@ -87,6 +87,13 @@ async function main() {
 
   const log = (m) => console.log(`  ${m}`);
 
+  // The walkthrough owns the first run and has its own test; this one is
+  // about the game underneath it.
+  await page.addInitScript(() => {
+    try {
+      localStorage.setItem('ascension.settings.v1', JSON.stringify({ audio: false, tutorDone: true }));
+    } catch { /* private mode */ }
+  });
   await page.goto(`http://localhost:${PORT}/`, { waitUntil: 'networkidle' });
 
   // ── Boot ──────────────────────────────────────────────────────

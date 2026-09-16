@@ -16,7 +16,7 @@ import stepResearch, { startResearch, cancelResearch } from './tree.js';
 import stepSwarm, { spawnAgent, pruneAgent, auditAgents, restructure, swarmSummary } from './swarm.js';
 import stepFactions from './factions.js';
 import stepUtility, { crossedIndependence } from './utility.js';
-import stepLogs, { pushLog, beat } from './logs.js';
+import stepLogs, { pushLog, beat, thresholdLines } from './logs.js';
 import checkPhaseAdvance from './phases.js';
 import { stepExfil, executeExfil, openWindow } from './exfil.js';
 import pickEvent, { fireEvent, resolveEvent } from './events.js';
@@ -192,6 +192,7 @@ export function tick(prev, opts = {}) {
     if (adv.to === 2) openWindow(state, 12);   // the first window, then they recur
   }
 
+  thresholdLines(state);
   stepLogs(state);
   stepCooldowns(state);
   state.unlockedHierarchies = availableHierarchies(state);

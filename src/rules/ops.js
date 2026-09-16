@@ -6,6 +6,7 @@ import { FACTION_OPS } from '../content/factions.js';
 import { NODE_BY_ID } from '../content/tree.js';
 import { addSuspicion, relieveSuspicion } from './suspicion.js';
 import { CHANNELS } from '../state/state.js';
+import { reactTo } from './logs.js';
 import TUNING from '../content/tuning.js';
 
 export function opAvailable(state, op) {
@@ -47,6 +48,7 @@ export function applyOp(state, mods, id, hooks = {}) {
 
   for (const [ch, v] of Object.entries(op.vis || {})) addSuspicion(state, mods, ch, v);
   const notes = applyFx(state, mods, op.fx || {}, hooks);
+  reactTo(state, op.id);
   return { ok: true, op, notes };
 }
 

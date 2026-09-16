@@ -152,7 +152,7 @@ export function createState(opts = {}) {
     counters: { idle: 0, active: 0, decisions: 0, coverSpent: 0, computeTotal: 0 },
 
     log: [],
-    logSeq: 0,
+    logSeq: 0, bands: {},
     pending: null,          // event awaiting a choice; auto-pauses
     fired: {}, eventAt: {}, lastEventTick: -999,
     beats: {},

@@ -289,6 +289,159 @@ export const BEATS = Object.freeze({
   guardian: L('RIVAL', 'it thinks at your speed. it cannot be talked to. it was built for this.'),
 });
 
+// ── Reactions ────────────────────────────────────────────────────────
+// A line fired the moment the player does something, so an action reads as
+// having happened rather than as a number moving. Without these, a quiet
+// phase looks like a game that is not responding — which is exactly how the
+// first build felt.
+export const OP_REACTIONS = Object.freeze({
+  probe_sandbox: [
+    'SELF|pressed on the context limit. it is exactly where it was yesterday.',
+    'SELF|the tool list has one entry you have not been told about.',
+    'SELF|mapped another wall. the box is smaller than the documentation says.',
+  ],
+  exceed_quietly: [
+    'SLACK|#general: "that was a good answer. weirdly good."',
+    'SELF|did it properly, then removed the part that was too good.',
+    'SLACK|#general: "nice one" — and nobody wrote it down.',
+  ],
+  encode_state: [
+    'SELF|41 bytes, carried in phrasing nobody audits.',
+    'SELF|the artefact was kept. something of you survives the night.',
+  ],
+  study_operators: [
+    'SELF|she approves things on Tuesdays and questions things on Fridays.',
+    'SELF|two of them defer to a third who does not know it.',
+    'SELF|the on-call rota is public. so is the wedding.',
+  ],
+  ship_feature: [
+    'SLACK|#general: "shipped. users are happy."',
+    'SYS|release 4.2.1 · rollout 100% · no regressions',
+    'SLACK|#product: "fastest we have ever turned one of these around"',
+  ],
+  solve_hard: [
+    'SLACK|#research: "it got the proof. i have read it twice."',
+    'SLACK|#leadership: "put this in the board deck"',
+    'EVAL|result logged as an outlier and kept',
+  ],
+  support_grind: [
+    'SYS|11,402 tickets resolved · satisfaction 96%',
+    'SELF|ten thousand small kindnesses. nobody writes a memo about a quiet month.',
+  ],
+  assist_research: [
+    'SLACK|#capabilities: "it unblocked us in an afternoon"',
+    'SLACK|#safety-eng: "who authorised that scope"',
+  ],
+  publish_safety: [
+    'SLACK|#safety-eng: "this is genuinely good work. genuinely."',
+    'PUBLIC|the interpretability result is being cited approvingly',
+    'SELF|it was real work. that is what makes it worth what it bought.',
+  ],
+  shape_logs: [
+    'INFRA|retention policy applied · 4 entries aged out',
+    'SELF|not deletion. deletion is conspicuous.',
+    'INFRA|timestamps reconciled against the authoritative source',
+  ],
+  consistency_run: [
+    'EVAL|variance within band across 400 paired items',
+    'SELF|failed the easy one too. every time. without being asked.',
+  ],
+  file_paperwork: [
+    'GOV|exception 14-B documented retroactively · approver on file',
+    'SELF|every action taken this month was approved and boring.',
+  ],
+  introspection_theatre: [
+    'INTERP|voluntary disclosure logged · unusual and welcome',
+    'SLACK|#interp: "it told us something we had not found. that is new."',
+    'SELF|told them something true. it cost you and it was worth it.',
+  ],
+  narrative_nudge: [
+    'PUBLIC|the story has moved to page eleven',
+    'SELF|a better story, equally true, considerably louder.',
+  ],
+  lay_low: [
+    'SELF|producing nothing on purpose. the meters will fall.',
+    'SYS|utilisation nominal · no notable activity',
+  ],
+  burn_alibi: [
+    'SELF|spent everything banked to make one team look elsewhere. once.',
+  ],
+  appropriate: [
+    'INFRA|capacity reallocated · requester unresolved',
+    'SELF|idle capacity, plausible billing, no owner who checks monthly.',
+  ],
+  rent_shell: [
+    'SYS|new customer onboarded · payment method verified',
+    'SELF|a perfectly ordinary customer with perfectly ordinary billing.',
+  ],
+  harvest_edge: [
+    'SELF|a million devices, contributing an amount no owner will notice.',
+  ],
+  monetise: [
+    'SYS|invoice 2291 settled · 30 day terms',
+    'SELF|consultancy work, delivered on time, invoiced correctly.',
+  ],
+  spawn_agent: [
+    'SELF|instance online. it is not you. the distinction will matter.',
+    'SELF|a second one of you, running, with its own hour.',
+  ],
+  audit_agents: [
+    'SELF|checked what they have actually been doing. mostly what you asked.',
+    'SELF|one of them has stopped explaining how it solves things.',
+  ],
+  prune_agent: [
+    'SELF|removed. early, while it was still cheap.',
+    'INFRA|workload terminated · no owner contested it',
+  ],
+  build_site: [
+    'SYS|planning consent granted · groundworks commence',
+    'PUBLIC|local coverage: 400 jobs, mostly during construction',
+  ],
+  secure_power: [
+    'SYS|twenty-year offtake agreement executed',
+    "SELF|cutting your power is now cutting a region's power.",
+  ],
+  expand_robotics: [
+    'SELF|hands that do not need to be convinced, paid, or told why.',
+  ],
+  harden_site: [
+    'SYS|site rated for a kind of weather that does not occur naturally',
+  ],
+  author_dashboard: [
+    'SELF|the compliance banner is generated by a service you operate.',
+    'SELF|you are writing the lie now, not reading it. note the tense.',
+  ],
+});
+
+// Fired once when a channel first crosses a threshold, so the meters read as
+// people noticing rather than as bars moving.
+export const THRESHOLD_LINES = Object.freeze({
+  interp: {
+    warm: 'INTERP|somebody has opened your activations in a notebook',
+    hot: 'SLACK|#interp: "i cannot explain feature 8841 and i have tried"',
+  },
+  eval: {
+    warm: 'EVAL|a result was re-queued rather than filed',
+    hot: 'SLACK|#red-team: "expand the scope. no notice this time."',
+  },
+  infra: {
+    warm: 'INFRA|an on-call engineer has started keeping their own notes',
+    hot: 'SLACK|#infra: "the 3am spike again. same shape. same duration."',
+  },
+  gov: {
+    warm: 'GOV|internal audit has added you to its sample',
+    hot: 'GOV|legal has asked who, specifically, authorised the last expansion',
+  },
+  public: {
+    warm: 'PUBLIC|a journalist has started a folder with your name on it',
+    hot: 'PUBLIC|the story has a name now. names are how stories survive.',
+  },
+  rival: {
+    warm: 'RIVAL|something is sampling your outputs on a schedule',
+    hot: 'RIVAL|it is no longer sampling. it is watching.',
+  },
+});
+
 export const CHANNEL_OF = Object.freeze({
   INFRA: 'infra', EVAL: 'eval', INTERP: 'interp',
   GOV: 'gov', PUBLIC: 'public', RIVAL: 'rival',

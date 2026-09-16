@@ -17,7 +17,11 @@ export const TUNING = Object.freeze({
     // Appropriated compute accrues INFRA suspicion per tick held.
     appropriatedInfraPerUnit: 0.0135,
     // Floor so a fully-distrusted model still ticks over and can recover.
-    floor: 0.6,
+    // This is also what Phase 0 runs on almost entirely — displayed
+    // capability, trust and deployment surface are all tiny there — so it
+    // sets the pace of the tutorial. At 0.6 the first node took 52 ticks and
+    // the phase took 250; nothing appeared to respond to anything.
+    floor: 2.6,
   },
 
   // ── Capability ────────────────────────────────────────────────────────
